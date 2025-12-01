@@ -3,22 +3,37 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
-from app.schemas.flight import FlightOut, FlightCreate, FlightUpdate
+
+from app.schemas.flight import (
+    FlightOut,
+    FlightCreate,
+    FlightUpdate,
+    FlightOutWithDynamic,
+)
 from app.db import models
-from sqlalchemy import func, asc, desc, text
+from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 from zoneinfo import ZoneInfo
 from datetime import datetime
-from typing import Optional
+
+from app.services.pricing import calculate_price
 
 # human-friendly normalizers
 from app.utils.date_utils import normalize_date
 from app.utils.time_utils import normalize_time
 from app.utils.location_utils import normalize_city
 
+# price utils (cooldown + human time)
+from app.utils.price_utils import (
+    human_time,
+    should_update_price,
+    seconds_since_iso,
+    DEFAULT_MIN_UPDATE_SECONDS,
+)
+
+# services
 from app.services.flight_service import (
     list_flights,
-    search_flights,
     get_flight,
     create_flight,
     update_flight,
@@ -71,13 +86,14 @@ def get_airport_code(db: Session, value: str) -> Optional[str]:
         {"v": v},
     ).fetchone()
     return row[0] if row else None
+
+
 def log_search(db: Session, origin_code: Optional[str], destination_code: Optional[str], search_date: Optional[str]):
     """
     Insert a row into search_logs with searched_at in Asia/Kolkata formatted as:
     'Saturday 30 November 2025'. Non-blocking: errors are logged but won't raise.
     """
     try:
-        # Full day + date + month + year in IST
         ist_ts = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%A %d %B %Y")
         db.execute(
             text(
@@ -98,7 +114,6 @@ def log_search(db: Session, origin_code: Optional[str], destination_code: Option
         return False
 
 
-
 # ------------------------
 # Flight existence helper (searches flights table)
 # ------------------------
@@ -111,26 +126,69 @@ def _exists_in_db(db: Session, *, origin: Optional[str] = None, destination: Opt
     return db.query(q.exists()).scalar()
 
 
+# ---------------------------------------
+# Small formatting helpers used below
+# ---------------------------------------
+def _human_time_safe(ts):
+    """Return human_time(ts) or None if ts falsy."""
+    if not ts:
+        return None
+    try:
+        return human_time(str(ts))
+    except Exception:
+        return str(ts)
+
+
+def _human_field(v):
+    """Convert departure/arrival stored value to human string safely."""
+    if v is None:
+        return None
+    try:
+        # if it's already a string ISO, human_time will parse
+        return human_time(str(v))
+    except Exception:
+        return str(v)
+
+
 # ============================================
 # Lookup Flight (ID or Flight Number)
+# Returns human-friendly times
 # ============================================
 @router.get("/flights/lookup/{key}", response_model=FlightOut)
 def api_lookup_flight(key: str, db: Session = Depends(get_db)):
+    """
+    Lookup by flight number or numeric id.
+    Returns human-friendly departure/arrival and last_price_updated.
+    """
     k = key.strip()
     f = get_flight_by_number(db, k.upper())
-    if f:
-        return f
-    
-    if k.isdigit():
+    if not f and k.isdigit():
         f = get_flight(db, int(k))
-        if f:
-            return f
 
-    raise HTTPException(status_code=404, detail=f"Flight '{key}' not found")
+    if not f:
+        raise HTTPException(status_code=404, detail=f"Flight '{key}' not found")
+
+    base_price = getattr(f, "base_price", None) or getattr(f, "price_real", 0.0)
+    return {
+        "id": int(f.id) if f.id is not None else None,
+        "flight_number": str(f.flight_number),
+        "airline": str(f.airline),
+        "origin": str(f.origin),
+        "destination": str(f.destination),
+        "departure_iso": _human_field(getattr(f, "departure_iso", None)),
+        "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+        "duration_min": int(f.duration_min),
+        "price_real": float(f.price_real),
+        "base_price": float(base_price),
+        "seats_total": int(f.seats_total),
+        "seats_available": int(f.seats_available),
+        "flight_date": str(f.flight_date),
+        "last_price_updated": _human_time_safe(getattr(f, "last_price_updated", None)),
+    }
 
 
 # ============================================
-# List Flights
+# List Flights (unchanged behaviour)
 # ============================================
 @router.get("/flights", response_model=List[FlightOut])
 def api_list_flights(
@@ -142,9 +200,9 @@ def api_list_flights(
 
 
 # ============================================
-# Search Flights (Human Friendly)
+# Search Flights (Human Friendly) - returns dynamic pricing
 # ============================================
-@router.get("/flights/search", response_model=List[FlightOut])
+@router.get("/flights/search", response_model=List[FlightOutWithDynamic])
 def api_search_flights(
     origin: Optional[str] = Query(None, min_length=1),
     destination: Optional[str] = Query(None, min_length=1),
@@ -174,7 +232,6 @@ def api_search_flights(
 
     # Prefer airport validation (more accurate). Fallback to flights table if airports not present.
     if origin:
-        # if airports table exists and the value isn't found there, return friendly error
         if airport_exists(db, origin) is False and _exists_in_db(db, origin=origin) is False:
             raise HTTPException(status_code=422, detail=f"Unknown origin '{origin}'. Try Hyderabad, Bengaluru, etc.")
     if destination:
@@ -188,18 +245,106 @@ def api_search_flights(
     # Log the search (non-blocking)
     try:
         log_search(db, origin_code, destination_code, date)
-    except Exception as e:
-        # never break search if logging fails
-        print("[LOG_SEARCH] unexpected error:", e)
+    except Exception:
+        pass
 
-    # Perform search using existing service
-    return search_flights(db, origin, destination, date, min_price, max_price, sort_by, order, limit, offset)
+    # Build base query using SQLAlchemy models
+    q = db.query(models.Flight)
+    if origin:
+        q = q.filter(func.lower(models.Flight.origin) == origin.lower())
+    if destination:
+        q = q.filter(func.lower(models.Flight.destination) == destination.lower())
+    if date:
+        q = q.filter(models.Flight.flight_date == date)
+    if min_price is not None:
+        q = q.filter(models.Flight.price_real >= min_price)
+    if max_price is not None:
+        q = q.filter(models.Flight.price_real <= max_price)
+
+    # Sorting
+    if sort_by == "price":
+        q = q.order_by(models.Flight.price_real.asc() if order == "asc" else models.Flight.price_real.desc())
+    elif sort_by == "duration":
+        q = q.order_by(models.Flight.duration_min.asc() if order == "asc" else models.Flight.duration_min.desc())
+    else:
+        q = q.order_by(models.Flight.id.asc())
+
+    # Pagination
+    flights = q.offset(offset).limit(limit).all()
+
+    # Batch load demand scores for efficiency
+    flight_ids = [f.id for f in flights if getattr(f, "id", None) is not None]
+    demand_map = {}
+    if flight_ids:
+        ds_rows = db.query(models.DemandScore).filter(models.DemandScore.flight_id.in_(flight_ids)).all()
+        demand_map = {ds.flight_id: ds.score for ds in ds_rows}
+
+    # Build results with dynamic price
+    results = []
+    for f in flights:
+        demand_score = float(demand_map.get(f.id, 0.0))
+
+        # Calculate price
+        new_price_raw, breakdown = calculate_price(f, demand_score=demand_score)
+        try:
+            new_price = float(new_price_raw) if new_price_raw is not None else None
+        except Exception:
+            new_price = None
+
+        base_price = float(getattr(f, "base_price", None) or getattr(f, "price_real", 0.0) or 0.0)
+        price_increase_percent = None
+        if base_price and new_price is not None:
+            try:
+                price_increase_percent = round((new_price - base_price) / base_price * 100, 1)
+            except Exception:
+                price_increase_percent = None
+
+        # Determine whether to show computed dynamic price or the published (stable) price_real
+        computed_price = round(new_price, 2) if new_price is not None else None
+
+        # If cooldown active, show published price_real instead of computed price
+        if not should_update_price(getattr(f, "last_price_updated", None), DEFAULT_MIN_UPDATE_SECONDS):
+            dynamic_price = float(f.price_real)
+            price_breakdown_out = None
+            price_cached_seconds_left = max(0, DEFAULT_MIN_UPDATE_SECONDS - int(seconds_since_iso(getattr(f, "last_price_updated", None) or 0)))
+        else:
+            dynamic_price = computed_price
+            price_breakdown_out = breakdown if isinstance(breakdown, dict) else None
+            price_cached_seconds_left = 0
+
+        results.append({
+            "id": int(f.id) if f.id is not None else None,
+            "flight_number": str(f.flight_number),
+            "airline": str(f.airline),
+            "origin": str(f.origin),
+            "destination": str(f.destination),
+            # human-friendly departure/arrival (IST)
+            "departure_iso": _human_field(getattr(f, "departure_iso", None)),
+            "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+            "duration_min": int(f.duration_min),
+            "price_real": float(f.price_real),
+            "base_price": base_price,
+            "dynamic_price": dynamic_price,
+            "price_increase_percent": price_increase_percent,
+            "seats_total": int(f.seats_total),
+            "seats_available": int(f.seats_available),
+            "flight_date": str(f.flight_date),
+            "demand_score": float(demand_score),
+            "price_breakdown": price_breakdown_out,
+            # only the human-friendly timestamp (no raw ISO)
+            "last_price_updated": _human_time_safe(getattr(f, "last_price_updated", None)),
+            # optional helper so front-end can show countdown (0 if live)
+            "price_cached_seconds_left": int(price_cached_seconds_left),
+        })
+
+    return results
 
 
 # ============================================
-# Search Flights via Path (Route Search)
+# Search Flights via Path (Route Search) - dynamic pricing too
+# (same behaviour as /flights/search but route path)
 # ============================================
-@router.get("/flights/route/{origin}/{destination}", response_model=List[FlightOut])
+@router.get("/flights/route/{origin}/{destination}", response_model=List[FlightOutWithDynamic])
 def api_route_search(
     origin: str,
     destination: str,
@@ -220,17 +365,14 @@ def api_route_search(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Same-city validation
     if origin.lower() == destination.lower():
         raise HTTPException(status_code=400, detail="Origin and destination cannot be the same.")
 
-    # Validate airports (best-effort)
     if origin and airport_exists(db, origin) is False:
         raise HTTPException(status_code=422, detail=f"Unknown origin '{origin}'.")
     if destination and airport_exists(db, destination) is False:
         raise HTTPException(status_code=422, detail=f"Unknown destination '{destination}'.")
 
-    # Resolve codes & log
     origin_code = get_airport_code(db, origin)
     destination_code = get_airport_code(db, destination)
     try:
@@ -238,15 +380,91 @@ def api_route_search(
     except Exception:
         pass
 
-    return search_flights(db, origin, destination, date, min_price, max_price, sort_by, order, limit, offset)
+    q = db.query(models.Flight).filter(
+        func.lower(models.Flight.origin) == origin.lower(),
+        func.lower(models.Flight.destination) == destination.lower(),
+    )
+    if date:
+        q = q.filter(models.Flight.flight_date == date)
+    if min_price is not None:
+        q = q.filter(models.Flight.price_real >= min_price)
+    if max_price is not None:
+        q = q.filter(models.Flight.price_real <= max_price)
+
+    if sort_by == "price":
+        q = q.order_by(models.Flight.price_real.asc() if order == "asc" else models.Flight.price_real.desc())
+    elif sort_by == "duration":
+        q = q.order_by(models.Flight.duration_min.asc() if order == "asc" else models.Flight.duration_min.desc())
+    else:
+        q = q.order_by(models.Flight.id.asc())
+
+    flights = q.offset(offset).limit(limit).all()
+
+    # batch demand load
+    flight_ids = [f.id for f in flights if getattr(f, "id", None) is not None]
+    demand_map = {}
+    if flight_ids:
+        ds_rows = db.query(models.DemandScore).filter(models.DemandScore.flight_id.in_(flight_ids)).all()
+        demand_map = {ds.flight_id: ds.score for ds in ds_rows}
+
+    results = []
+    for f in flights:
+        demand_score = float(demand_map.get(f.id, 0.0))
+        new_price_raw, breakdown = calculate_price(f, demand_score=demand_score)
+        try:
+            new_price = float(new_price_raw) if new_price_raw is not None else None
+        except Exception:
+            new_price = None
+
+        base_price = float(getattr(f, "base_price", None) or getattr(f, "price_real", 0.0) or 0.0)
+        price_increase_percent = None
+        if base_price and new_price is not None:
+            try:
+                price_increase_percent = round((new_price - base_price) / base_price * 100, 1)
+            except Exception:
+                price_increase_percent = None
+
+        computed_price = round(new_price, 2) if new_price is not None else None
+
+        if not should_update_price(getattr(f, "last_price_updated", None), DEFAULT_MIN_UPDATE_SECONDS):
+            dynamic_price = float(f.price_real)
+            price_breakdown_out = None
+            price_cached_seconds_left = max(0, DEFAULT_MIN_UPDATE_SECONDS - int(seconds_since_iso(getattr(f, "last_price_updated", None) or 0)))
+        else:
+            dynamic_price = computed_price
+            price_breakdown_out = breakdown if isinstance(breakdown, dict) else None
+            price_cached_seconds_left = 0
+
+        results.append({
+            "id": int(f.id) if f.id is not None else None,
+            "flight_number": str(f.flight_number),
+            "airline": str(f.airline),
+            "origin": str(f.origin),
+            "destination": str(f.destination),
+            "departure_iso": _human_field(getattr(f, "departure_iso", None)),
+            "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+            "duration_min": int(f.duration_min),
+            "price_real": float(f.price_real),
+            "base_price": base_price,
+            "dynamic_price": dynamic_price,
+            "price_increase_percent": price_increase_percent,
+            "seats_total": int(f.seats_total),
+            "seats_available": int(f.seats_available),
+            "flight_date": str(f.flight_date),
+            "demand_score": float(demand_score),
+            "price_breakdown": price_breakdown_out,
+            "last_price_updated": _human_time_safe(getattr(f, "last_price_updated", None)),
+            "price_cached_seconds_left": int(price_cached_seconds_left),
+        })
+
+    return results
 
 
 # =========================================================
-# Feature 3: Popular Routes (use search_logs first, fallback to routes)
+# Popular Routes (uses search_logs first, fallback to routes)
 # =========================================================
 @router.get("/flights/popular")
 def api_popular_routes(limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
-    # Primary: aggregate search_logs (if present)
     try:
         rows = db.execute(
             text("""
@@ -263,10 +481,8 @@ def api_popular_routes(limit: int = Query(10, ge=1, le=50), db: Session = Depend
         if rows:
             return [{"origin": r[0], "destination": r[1], "search_count": r[2]} for r in rows]
     except Exception as e:
-        # table may not exist or other DB issue — fallback to routes
         print("[POPULAR] search_logs query failed:", e)
 
-    # Fallback: seeded routes table
     rows = db.execute(
         text("SELECT origin_code, destination_code FROM routes LIMIT :limit"),
         {"limit": limit},
@@ -275,7 +491,7 @@ def api_popular_routes(limit: int = Query(10, ge=1, le=50), db: Session = Depend
 
 
 # =========================================================
-# Feature 4: Cheapest Flight
+# Cheapest Flight (returns human times)
 # =========================================================
 @router.get("/flights/cheapest", response_model=Optional[FlightOut])
 def api_cheapest_flight(
@@ -302,12 +518,31 @@ def api_cheapest_flight(
     if date:
         q = q.filter(models.Flight.flight_date == date)
 
-    flight = q.order_by(models.Flight.price_real.asc()).first()
-    return flight
+    f = q.order_by(models.Flight.price_real.asc()).first()
+    if not f:
+        return None
+
+    base_price = getattr(f, "base_price", None) or getattr(f, "price_real", 0.0)
+    return {
+        "id": int(f.id) if f.id is not None else None,
+        "flight_number": str(f.flight_number),
+        "airline": str(f.airline),
+        "origin": str(f.origin),
+        "destination": str(f.destination),
+        "departure_iso": _human_field(getattr(f, "departure_iso", None)),
+        "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+        "duration_min": int(f.duration_min),
+        "price_real": float(f.price_real),
+        "base_price": float(base_price),
+        "seats_total": int(f.seats_total),
+        "seats_available": int(f.seats_available),
+        "flight_date": str(f.flight_date),
+        "last_price_updated": _human_time_safe(getattr(f, "last_price_updated", None)),
+    }
 
 
 # =========================================================
-# Feature 5: Suggest Airports/Cities (uses airports table)
+# Suggest Airports/Cities
 # =========================================================
 @router.get("/flights/suggest")
 def api_suggest(
@@ -345,7 +580,24 @@ def api_get_flight(flight_id: int, db: Session = Depends(get_db)):
     f = get_flight(db, flight_id)
     if not f:
         raise HTTPException(status_code=404, detail="Flight not found")
-    return f
+
+    base_price = getattr(f, "base_price", None) or getattr(f, "price_real", 0.0)
+    return {
+        "id": int(f.id) if f.id is not None else None,
+        "flight_number": str(f.flight_number),
+        "airline": str(f.airline),
+        "origin": str(f.origin),
+        "destination": str(f.destination),
+        "departure_iso": _human_field(getattr(f, "departure_iso", None)),
+        "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+        "duration_min": int(f.duration_min),
+        "price_real": float(f.price_real),
+        "base_price": float(base_price),
+        "seats_total": int(f.seats_total),
+        "seats_available": int(f.seats_available),
+        "flight_date": str(f.flight_date),
+        "last_price_updated": _human_time_safe(getattr(f, "last_price_updated", None)),
+    }
 
 
 @router.post("/flights", response_model=FlightOut, status_code=status.HTTP_201_CREATED)

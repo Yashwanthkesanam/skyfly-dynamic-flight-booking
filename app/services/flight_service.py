@@ -1,10 +1,11 @@
 # app/services/flight_service.py
+from app.services.pricing import calculate_price
 from typing import List, Optional
 from sqlalchemy import select, asc, desc, func
 from sqlalchemy.orm import Session
 from app.db.models import Flight
 from app.schemas.flight import FlightCreate, FlightUpdate
-
+from app.db import models
 def list_flights(db: Session, limit: int = 50, offset: int = 0) -> List[Flight]:
     stmt = select(Flight).limit(limit).offset(offset)
     return db.execute(stmt).scalars().all()
@@ -90,3 +91,38 @@ def search_flights(
     stmt = stmt.limit(limit).offset(offset)
     rows = db.execute(stmt).scalars().all()
     return rows
+
+
+def search_flights(db, origin, destination, date, min_price, max_price, sort_by, order, limit, offset):
+    q = db.query(models.Flight)  # existing filters...
+    rows = q.offset(offset).limit(limit).all()
+
+    results = []
+    # fetch demand scores in batch to be efficient
+    flight_ids = [r.id for r in rows]
+    ds_map = {}
+    if flight_ids:
+        ds_rows = db.query(models.DemandScore).filter(models.DemandScore.flight_id.in_(flight_ids)).all()
+        ds_map = {d.flight_id: d.score for d in ds_rows}
+
+    for r in rows:
+        dscore = ds_map.get(r.id, None)
+        price, breakdown = calculate_price(r, demand_score=dscore)
+        # You may include breakdown if debug mode
+        out = {
+            "flight_number": r.flight_number,
+            "airline": r.airline,
+            "origin": r.origin,
+            "destination": r.destination,
+            "departure_iso": r.departure_iso,
+            "arrival_iso": r.arrival_iso,
+            "duration_min": r.duration_min,
+            "price_real": price,
+            "base_price": r.base_price,
+            "seats_total": r.seats_total,
+            "seats_available": r.seats_available,
+            "flight_date": r.flight_date,
+            "id": r.id,
+        }
+        results.append(out)
+    return results

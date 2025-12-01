@@ -228,3 +228,34 @@ VALUES ('BK002', '6E212', 'Hyderabad', 'Mumbai', 'Sarah', '8887776666', 8);
 INSERT INTO bookings (trans_id, flight_number, origin, destination, passenger_fullname, passenger_contact, seat_no)
 VALUES ('BK003', '6E212', 'Hyderabad', 'Mumbai', 'John', '7776665555', 9);
 COMMIT;*/
+
+-- M2: Fare history, demand_scores, bookings (minimal)
+CREATE TABLE IF NOT EXISTS fare_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  flight_id INTEGER NOT NULL,
+  old_price REAL,
+  new_price REAL,
+  reason TEXT,
+  changed_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_fare_history_flight ON fare_history(flight_id);
+
+CREATE TABLE IF NOT EXISTS demand_scores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  flight_id INTEGER,           -- optional: flight-specific
+  origin_code TEXT,
+  destination_code TEXT,
+  score REAL DEFAULT 0.0,      -- normalized 0..1
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_demand_flight ON demand_scores(flight_id);
+
+-- optional: bookings table (to measure real bookings)
+CREATE TABLE IF NOT EXISTS bookings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  flight_id INTEGER NOT NULL,
+  seats_booked INTEGER NOT NULL,
+  price_paid REAL NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bookings_flight ON bookings(flight_id);
