@@ -1,6 +1,5 @@
 # main.py
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from app.db import models
 from app.db.base import engine
 import importlib
@@ -22,10 +21,14 @@ app = FastAPI(
 
 # ----------------------------------------------------
 # CORS (important for frontend integration later)
+# Use FastAPI / Starlette API to register middleware.
+# Do NOT mutate app.user_middleware directly.
 # ----------------------------------------------------
+from starlette.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Change for production
+    allow_origins=["*"],         # change to specific origins for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,6 +42,16 @@ from app.api.v1.feeds import router as feeds_router
 
 app.include_router(flights_router)
 app.include_router(feeds_router)
+
+# ----------------------------------------------------
+# BOOKING ROUTER (Milestone 3) - include if present
+# ----------------------------------------------------
+try:
+    from app.api.v1.bookings import router as bookings_router
+    app.include_router(bookings_router)  # bookings_router already has its own prefix
+    print("Included bookings router (app.api.v1.bookings).")
+except Exception as e:
+    print("Bookings router not included —", e)
 
 # ----------------------------------------------------
 # OPTIONAL: pricing router (Milestone 2)
@@ -82,7 +95,6 @@ def startup_event():
     # Start simulator background thread if available
     try:
         if _simulator and callable(getattr(_simulator, "start", None)):
-            # For demo: start with schedule-based intervals (no override)
             _simulator.start()
             status = _simulator.status() if callable(getattr(_simulator, "status", None)) else {}
             print("✅ Simulator started:", status)
@@ -113,7 +125,7 @@ def shutdown_event():
 # ----------------------------------------------------
 @app.get("/health")
 def health():
-    info = {"status": "ok", "service": "SkyFly API running", "milestones": ["M1", "M2"]}
+    info = {"status": "ok", "service": "SkyFly API running", "milestones": ["M1", "M2", "M3"]}
     if _simulator and callable(getattr(_simulator, "status", None)):
         try:
             info["simulator"] = _simulator.status()

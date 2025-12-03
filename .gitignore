@@ -43,3 +43,18 @@ Thumbs.db
 # ---- Python build ----
 build/
 dist/
+.venv/
+__pycache__/
+*.pyc
+flights.db
+*.db.bak
+data/*.csv
+.env
+.venv/
+__pycache__/
+*.pyc
+flights.db
+*.db.bak
+data/*.csv
+.env
+flights.db.backup
