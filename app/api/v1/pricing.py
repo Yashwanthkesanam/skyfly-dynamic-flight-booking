@@ -15,5 +15,6 @@ def fare_history(flight_id: int, limit: int = Query(20, ge=1, le=500), db: Sessi
 def demand_score(flight_id: int, db: Session = Depends(get_db)):
     row = db.query(models.DemandScore).filter(models.DemandScore.flight_id == flight_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="No demand score")
+        # Return default neutral score instead of 404 to avoid console errors
+        return {"flight_id": flight_id, "score": 0.0, "updated_at": None}
     return {"flight_id": row.flight_id, "score": row.score, "updated_at": row.updated_at}

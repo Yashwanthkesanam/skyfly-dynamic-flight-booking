@@ -1,12 +1,12 @@
 # app/schemas/booking.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, Dict, List
 
 class ReserveRequest(BaseModel):
     flight_id: int
     seats: int = Field(..., ge=1)
-    passenger_name: Optional[str] = None
-    passenger_contact: Optional[str] = None
+    passenger_name: str = Field(..., min_length=2, description="Passenger full name")
+    passenger_contact: EmailStr = Field(..., description="Passenger email address")
 
 class ReserveResponse(BaseModel):
     reservation_id: int
@@ -66,6 +66,7 @@ class BookingOut(BaseModel):
 class FlightShort(BaseModel):
     id: int
     flight_number: str
+    airline: str
     origin: str
     destination: str
     departure_iso: str

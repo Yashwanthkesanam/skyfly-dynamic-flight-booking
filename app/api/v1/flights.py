@@ -487,7 +487,21 @@ def api_popular_routes(limit: int = Query(10, ge=1, le=50), db: Session = Depend
         text("SELECT origin_code, destination_code FROM routes LIMIT :limit"),
         {"limit": limit},
     ).fetchall()
-    return [{"origin": r[0], "destination": r[1], "route_count": None} for r in rows]
+    if rows:
+        return [{"origin": r[0], "destination": r[1], "route_count": None} for r in rows]
+
+    # Fallback to actual flights table if routes table is empty
+    rows = db.execute(
+        text("""
+            SELECT origin, destination, COUNT(*) as cnt 
+            FROM flights 
+            GROUP BY origin, destination 
+            ORDER BY cnt DESC 
+            LIMIT :limit
+        """),
+        {"limit": limit},
+    ).fetchall()
+    return [{"origin": r[0], "destination": r[1], "route_count": r[2]} for r in rows]
 
 
 # =========================================================

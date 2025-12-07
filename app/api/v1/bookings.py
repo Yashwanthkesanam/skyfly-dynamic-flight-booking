@@ -1,5 +1,5 @@
 # app/api/v1/bookings.py
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import json
@@ -17,6 +17,7 @@ from app.schemas.booking import (
     ReceiptOut,
 )
 from app.services.booking_service import reserve_seats, confirm_reservation, cancel_booking
+from app.services.email_service import send_booking_email
 from app.db.models import Booking, Flight
 
 # --- IST timestamp helper ---
@@ -61,11 +62,40 @@ def api_reserve(req: ReserveRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/confirm", response_model=ConfirmResponse)
-def api_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
+def api_confirm(req: ConfirmRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         booking, status, breakdown = confirm_reservation(
             db, req.reservation_id, req.payment_success, req.payment_meta
         )
+
+        if status == "confirmed":
+            try:
+                # Prepare data for background email sending (avoid DB session issues)
+                flight_obj = booking.flight
+                
+                # Construct Pydantic/Dict objects to pass to background task
+                # We use the schema classes or just simple objects that the email service expects
+                # email_service expects objects with .attribute access
+                
+                # Create a simple class or use schemas. Using Schemas is cleaner.
+                booking_data = BookingOut.from_orm(booking)
+                
+                flight_data = FlightShort(
+                    id=flight_obj.id,
+                    flight_number=flight_obj.flight_number,
+                    airline=flight_obj.airline,
+                    origin=flight_obj.origin,
+                    destination=flight_obj.destination,
+                    departure_iso=flight_obj.departure_iso,
+                    arrival_iso=flight_obj.arrival_iso
+                )
+                
+                print(f"DEBUG: Queueing email task for PNR: {booking.pnr} to {booking.passenger_contact}")
+                background_tasks.add_task(send_booking_email, booking_data, flight_data)
+            except Exception as e:
+                # Do not block response on email failure logic error
+                print(f"Error preparing email task: {e}")
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -157,18 +187,27 @@ def lookup_booking(pnr: str, db: Session = Depends(get_db)):
 def list_bookings(
     flight_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
+    pnrs: Optional[str] = Query(None, description="Comma-separated list of PNRs to filter by"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     """
     List bookings with optional filters.
+    If 'pnrs' is provided, only returns bookings matching those PNRs.
     """
     q = db.query(Booking)
+    
+    if pnrs:
+        pnr_list = [p.strip() for p in pnrs.split(',') if p.strip()]
+        if pnr_list:
+            q = q.filter(Booking.pnr.in_(pnr_list))
+            
     if flight_id is not None:
         q = q.filter(Booking.flight_id == flight_id)
     if status:
         q = q.filter(Booking.status == status)
+        
     q = q.order_by(Booking.id.desc()).limit(limit).offset(offset)
     results: List[BookingOut] = []
     for b in q:
@@ -237,6 +276,7 @@ def receipt_by_pnr(pnr: str, db: Session = Depends(get_db)):
     flight_short = FlightShort(
         id=f.id,
         flight_number=f.flight_number,
+        airline=f.airline,
         origin=f.origin,
         destination=f.destination,
         departure_iso=f.departure_iso,

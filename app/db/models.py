@@ -9,7 +9,7 @@ class Flight(Base):
     __tablename__ = "flights"
 
     id = Column(Integer, primary_key=True, index=True)
-    flight_number = Column(String, unique=True, nullable=False)
+    flight_number = Column(String, nullable=False, index=True)
     airline = Column(String, nullable=False)
     origin = Column(String, nullable=False)
     destination = Column(String, nullable=False)
@@ -87,3 +87,4 @@ class Booking(Base):
 
     # ORM relationship to Flight (convenience)
     flight = relationship("Flight", backref="bookings", lazy="joined")
+

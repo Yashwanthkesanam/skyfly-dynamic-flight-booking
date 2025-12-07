@@ -18,15 +18,22 @@ def get_db():
         db.close()
 
 @router.get("/simulate_feed", response_model=List[FlightOut])
-def simulate_feed(count: int = Query(3, ge=1, le=10), insert: bool = Query(False), db: Session = Depends(get_db)):
+def simulate_feed(count: int = Query(3, ge=1, le=1000), insert: bool = Query(False), db: Session = Depends(get_db)):
     origins = ['Hyderabad','Bengaluru','Mumbai','Delhi','Chennai','Kolkata']
     airlines = ['AirIndia','IndiGo','SpiceJet','Vistara']
     generated = []
 
+    start_date = datetime(2025, 12, 10)
+    end_date = datetime(2026, 2, 28)
+    delta_days = (end_date - start_date).days
+
     for _ in range(count):
         origin = random.choice(origins)
         dest = random.choice([d for d in origins if d != origin])
-        dep_dt = datetime.utcnow().replace(hour=random.randint(0,23), minute=random.choice([0,15,30,45]), second=0, microsecond=0)
+        
+        random_days = random.randint(0, delta_days)
+        dep_dt = (start_date + timedelta(days=random_days)).replace(hour=random.randint(0,23), minute=random.choice([0,15,30,45]), second=0, microsecond=0)
+        
         duration = random.choice([60,75,90,120,150])
         arr_dt = dep_dt + timedelta(minutes=duration)
         price = round(random.uniform(2000,7000), 2)
