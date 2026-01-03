@@ -1,6 +1,6 @@
 // utils/validateFlightData.ts
 
-import { FlightItem } from '../types';
+import { FlightItem, PriceBreakdown } from '../types';
 
 /**
  * Validates that a flight object has all required fields and valid data
@@ -100,18 +100,28 @@ export function filterValidFlights(flights: any[]): FlightItem[] {
  * Use this as a last resort if you need to display potentially invalid data
  */
 export function sanitizeFlightData(flight: any): FlightItem {
+    const defaultBreakdown: PriceBreakdown = {
+        base: flight.base_price || 0,
+        time_mult: 1,
+        seat_mult: 1,
+        demand_mult: 1,
+        clamped_price: flight.dynamic_price || 0,
+    };
+
     return {
         id: flight.id || 'unknown',
         flight_number: flight.flight_number || 'N/A',
         airline: flight.airline || 'Unknown Airline',
         origin: flight.origin || 'N/A',
         destination: flight.destination || 'N/A',
+        date: flight.date || (flight.departure_time ? flight.departure_time.split('T')[0] : new Date().toISOString().split('T')[0]),
         departure_time: flight.departure_time || new Date().toISOString(),
         arrival_time: flight.arrival_time || new Date().toISOString(),
         duration_minutes: flight.duration_minutes || 0,
         seats_available: flight.seats_available || 0,
         dynamic_price: flight.dynamic_price || 0,
         base_price: flight.base_price || flight.dynamic_price || 0,
+        price_breakdown: flight.price_breakdown || defaultBreakdown,
         price_increase_percent: flight.price_increase_percent || 0,
         price_cached_seconds_left: flight.price_cached_seconds_left || 0,
     };
