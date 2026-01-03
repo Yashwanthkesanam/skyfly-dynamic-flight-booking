@@ -2,6 +2,12 @@
 
 Refactored full-stack application with separate backend and frontend for independent deployment.
 
+## 🌐 Live Demo
+
+- **Frontend (UI)**: [https://flysmart-dynamic-flight-booking.vercel.app](https://flysmart-dynamic-flight-booking.vercel.app)
+- **Backend (API)**: [https://flysmart-dynamic-flight-booking.onrender.com/docs](https://flysmart-dynamic-flight-booking.onrender.com/docs)
+
+
 ## 📂 Project Structure
 
 - **`backend/`**: FastAPI-based backend application.
