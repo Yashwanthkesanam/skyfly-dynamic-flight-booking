@@ -1,4 +1,4 @@
-// hooks/useWebSocket.ts
+ // hooks/useWebSocket.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -20,7 +20,7 @@ interface UseWebSocketReturn {
     reconnect: () => void;
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/feeds';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || '';
 const RECONNECT_DELAY = 3000; // 3 seconds
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 
