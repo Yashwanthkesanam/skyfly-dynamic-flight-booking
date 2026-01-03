@@ -17,8 +17,13 @@ export default function SearchForm() {
   const [tripType, setTripType] = useState<"oneway" | "roundtrip" | "multicity">("oneway");
   const [from, setFrom] = useState("Delhi");
   const [to, setTo] = useState("Bengaluru");
-  const [departDate, setDepartDate] = useState<Date | null>(new Date());
-  const [returnDate, setReturnDate] = useState<Date | null>(new Date(new Date().setDate(new Date().getDate() + 1)));
+  const [departDate, setDepartDate] = useState<Date | null>(null);
+  const [returnDate, setReturnDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setDepartDate(new Date());
+    setReturnDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+  }, []);
 
   // Suggestions State
   const [suggestFrom, setSuggestFrom] = useState<any[]>([]);
@@ -171,7 +176,7 @@ export default function SearchForm() {
         </div>
 
         {/* Main Input Grid - Single Row with Dividers */}
-        <div className="grid grid-cols-12 border border-[var(--border)] rounded-lg divide-x divide-[var(--border)] min-h-[110px]">
+        <div className="grid grid-cols-12 border border-[var(--border)] rounded-lg divide-y md:divide-y-0 md:divide-x divide-[var(--border)] min-h-[110px]">
 
           {/* FROM */}
           <div className="col-span-12 md:col-span-3 px-5 py-3 relative hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group cursor-pointer" onClick={() => fromRef.current?.focus()}>
@@ -188,7 +193,7 @@ export default function SearchForm() {
 
             {/* Suggestions One */}
             {showFromSuggest && suggestFrom.length > 0 && (
-              <div className="absolute top-full left-0 w-[350px] bg-[var(--surface)] shadow-2xl rounded-lg z-[999] border border-[var(--border)] mt-2">
+              <div className="absolute top-full left-0 w-full md:w-[350px] bg-[var(--surface)] shadow-2xl rounded-lg z-[999] border border-[var(--border)] mt-2">
                 {suggestFrom.map((item, idx) => (
                   <div key={idx} onClick={(e) => { e.stopPropagation(); selectFrom(item); }} className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer flex justify-between border-b last:border-0 border-[var(--border)]">
                     <div>
@@ -215,16 +220,20 @@ export default function SearchForm() {
             />
             <span className="block text-xs text-[var(--muted)] mt-1 truncate">BLR, Bengaluru International Airport</span>
 
-            {/* Swap Icon */}
-            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--surface)] shadow-md border border-[var(--border)] flex items-center justify-center text-blue-600 z-10 cursor-pointer hover:scale-110 transition-transform" onClick={() => {
-              const temp = from; setFrom(to); setTo(temp);
-            }}>
+            {/* Swap Icon - Mobile Centered / Desktop Absolute Left */}
+            <div
+              className="absolute left-1/2 -top-4 md:left-[-1rem] md:top-1/2 -translate-x-1/2 md:translate-x-0 md:-translate-y-1/2 w-8 h-8 rounded-full bg-[var(--surface)] shadow-md border border-[var(--border)] flex items-center justify-center text-blue-600 z-10 cursor-pointer hover:scale-110 transition-transform rotate-90 md:rotate-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                const temp = from; setFrom(to); setTo(temp);
+              }}
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
             </div>
 
             {/* Suggestions Two */}
             {showToSuggest && suggestTo.length > 0 && (
-              <div className="absolute top-full left-0 w-[350px] bg-[var(--surface)] shadow-2xl rounded-lg z-[999] border border-[var(--border)] mt-2">
+              <div className="absolute top-full left-0 w-full md:w-[350px] bg-[var(--surface)] shadow-2xl rounded-lg z-[999] border border-[var(--border)] mt-2">
                 {suggestTo.map((item, idx) => (
                   <div key={idx} onClick={(e) => { e.stopPropagation(); selectTo(item); }} className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer flex justify-between border-b last:border-0 border-[var(--border)]">
                     <div>

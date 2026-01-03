@@ -72,9 +72,34 @@ function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSele
         )}
 
         {/* Main Content */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          {/* Airline Info */}
-          <div className="flex-shrink-0 w-full md:w-24 flex flex-col items-center md:items-start text-center md:text-left">
+        {/* Main Content */}
+        <div className="flex flex-col md:flex-row gap-4 md:items-center">
+
+          {/* Mobile Top Row: Airline Left, Price Right */}
+          <div className="flex md:hidden justify-between items-center w-full">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md">
+                {flight.airline.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div className="text-sm font-bold text-[var(--fg)] leading-none">{flight.airline}</div>
+                <div className="text-[10px] text-[var(--muted)]">{flight.flight_number}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              {flight.base_price < flight.dynamic_price && (
+                <div className="text-[10px] text-[var(--muted)] line-through decoration-red-500">
+                  {formatINR(flight.base_price)}
+                </div>
+              )}
+              <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent leading-none">
+                {formatINR(flight.dynamic_price)}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Airline Info (Hidden on Mobile) */}
+          <div className="hidden md:flex flex-shrink-0 w-24 flex-col items-center md:items-start text-center md:text-left">
             <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-sm font-bold text-white mb-2 shadow-md">
               {flight.airline.slice(0, 2).toUpperCase()}
             </div>
@@ -82,35 +107,39 @@ function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSele
             <div className="text-xs text-[var(--muted)]">{flight.flight_number}</div>
           </div>
 
-          {/* Flight Timing */}
-          <div className="flex-grow flex items-center justify-between w-full md:max-w-md">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--fg)]">{formatTime(flight.departure_time)}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">{flight.origin}</div>
+          {/* Flight Timing (Row on Desktop, Row on Mobile too now) */}
+          <div className="flex-grow flex items-center justify-between w-full md:max-w-md py-2 md:py-0 border-y md:border-y-0 border-dashed border-[var(--border)] md:border-0">
+            <div className="text-left md:text-center min-w-[60px]">
+              <div className="text-xl md:text-2xl font-bold text-[var(--fg)]">{formatTime(flight.departure_time)}</div>
+              <div className="text-xs md:text-sm text-[var(--muted)] font-medium">{flight.origin}</div>
             </div>
 
-            <div className="flex-grow px-4 flex flex-col items-center justify-center min-w-[140px]">
-              <div className="text-sm text-[var(--muted)] mb-2 font-bold whitespace-nowrap">{formatDuration(flight.duration_minutes)}</div>
-              <div className="w-full h-[2px] bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 relative">
+            <div className="flex-grow px-2 md:px-4 flex flex-col items-center justify-center">
+              <div className="text-[10px] md:text-sm text-[var(--muted)] mb-1 font-bold whitespace-nowrap">{formatDuration(flight.duration_minutes)}</div>
+
+              {/* Desktop Bar */}
+              <div className="hidden md:block w-full h-[2px] bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 relative">
                 <div className="absolute top-1/2 left-0 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500"></div>
                 <div className="absolute top-1/2 right-0 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500"></div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <div className="text-xs bg-[var(--surface)] px-2 py-0.5 rounded-full text-[var(--muted)] font-medium border border-[var(--border)]">
-                    ✈️
-                  </div>
+                  <div className="text-xs bg-[var(--surface)] px-2 py-0.5 rounded-full text-[var(--muted)] font-medium border border-[var(--border)]">✈️</div>
                 </div>
               </div>
-              <div className="text-xs text-[var(--fg)] mt-2 font-semibold whitespace-nowrap">Non-stop</div>
+
+              {/* Mobile Arrow */}
+              <div className="md:hidden text-blue-400 text-xs tracking-[0.2em]">--------✈--------</div>
+
+              <div className="text-[10px] md:text-xs text-[var(--fg)] mt-1 font-semibold whitespace-nowrap">Non-stop</div>
             </div>
 
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--fg)]">{formatTime(flight.arrival_time)}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">{flight.destination}</div>
+            <div className="text-right md:text-center min-w-[60px]">
+              <div className="text-xl md:text-2xl font-bold text-[var(--fg)]">{formatTime(flight.arrival_time)}</div>
+              <div className="text-xs md:text-sm text-[var(--muted)] font-medium">{flight.destination}</div>
             </div>
           </div>
 
-          {/* Price & Action */}
-          <div className="flex-shrink-0 w-full md:w-56 flex flex-col items-end gap-3 text-right">
+          {/* Desktop Price & Action */}
+          <div className="hidden md:flex flex-shrink-0 w-56 flex-col items-end gap-3 text-right">
             <div className="w-full">
               {flight.base_price < flight.dynamic_price && (
                 <div className="text-xs text-[var(--muted)] line-through decoration-red-500 mb-1">
@@ -121,30 +150,46 @@ function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSele
                 {formatINR(flight.dynamic_price)}
               </div>
               <div className="flex items-center justify-end gap-2 mt-1">
-                <button
-                  onClick={() => onShowBreakdown(flight)}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline flex items-center gap-1"
-                >
+                <button onClick={() => onShowBreakdown(flight)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline flex items-center gap-1">
                   <ChartBarIcon className="w-3 h-3" />
                   Price Breakdown
                 </button>
               </div>
             </div>
+            {!hideBookButton && (
+              <button
+                onClick={() => onReserve(flight)}
+                className={`w-full font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 ${selectionMode ? (isSelected ? 'bg-orange-500 text-white' : 'border-2 border-orange-500 text-orange-500') : 'bg-orange-500 text-white'}`}
+              >
+                {selectionMode ? (isSelected ? 'Selected' : 'Select') : 'Book Now'}
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Buttons Row */}
+          <div className="flex md:hidden items-center justify-between gap-3 mt-2">
+            <button
+              onClick={() => onShowBreakdown(flight)}
+              className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg"
+            >
+              Price Breakdown
+            </button>
 
             {!hideBookButton && (
               <button
                 onClick={() => onReserve(flight)}
-                className={`w-full font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 ${selectionMode
+                className={`flex-1 font-bold py-2 px-4 rounded-lg text-sm shadow-sm active:scale-95 ${selectionMode
                   ? isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-orange-500/30'
-                    : 'bg-transparent border-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                  : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-transparent border border-orange-500 text-orange-600'
+                  : 'bg-orange-500 text-white'
                   }`}
               >
                 {selectionMode ? (isSelected ? 'Selected' : 'Select') : 'Book Now'}
               </button>
             )}
           </div>
+
         </div>
 
         {/* Additional Info Row */}

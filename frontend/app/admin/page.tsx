@@ -89,11 +89,11 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold text-[var(--fg)]">Admin Dashboard</h1>
         <button
           onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors w-full md:w-auto"
         >
           Logout
         </button>

@@ -18,7 +18,7 @@ export default function LoginPage() {
         // Simulate network delay for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const success = authService.login(email, password);
+        const success = await authService.login(email, password);
 
         if (success) {
             showSuccess('Login successful! Redirecting...');

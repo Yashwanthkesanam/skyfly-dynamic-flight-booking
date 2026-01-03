@@ -178,7 +178,7 @@ function ResultsContent() {
 
           <div className="flex-1">
             {/* Header */}
-            <div className="mb-6 flex items-end justify-between">
+            <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-[var(--fg)]">
                   {isRoundTrip ? 'Select Flights' : `Flights from ${origin} to ${destination}`}
@@ -187,9 +187,11 @@ function ResultsContent() {
                   {date} {isRoundTrip && ` - ${returnDate}`}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileFilterOpen(true)} className="md:hidden px-4 py-2 border rounded-lg">Filters</button>
-                <SortDropdown currentSort={sortOption} onSortChange={setSortOption} />
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button onClick={() => setIsMobileFilterOpen(true)} className="md:hidden flex-1 px-4 py-2 border border-[var(--border)] rounded-lg font-semibold bg-[var(--surface)]">Filters</button>
+                <div className="flex-1 md:flex-none">
+                  <SortDropdown currentSort={sortOption} onSortChange={setSortOption} />
+                </div>
               </div>
             </div>
 

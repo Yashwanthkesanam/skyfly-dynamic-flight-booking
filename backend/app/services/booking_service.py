@@ -158,7 +158,8 @@ def confirm_reservation(db: Session, reservation_id: int, payment_success: bool 
                 else:
                     final_price, breakdown = calculate_price(flight, demand_score=None)
 
-                booking.price_paid = float(final_price)
+                # Fix: Multiply unit price by number of seats
+                booking.price_paid = float(final_price) * seats_needed
                 booking.status = "confirmed"
 
                 # --- atomic PNR write: try to set pnr atomically using UPDATE ... WHERE pnr IS NULL ---

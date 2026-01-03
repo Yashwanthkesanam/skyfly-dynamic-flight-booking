@@ -43,11 +43,11 @@ export default function Header() {
   return (
     <header className="bg-[var(--surface)] border-b border-[var(--border)] transition-colors sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14 md:h-16">
           <div className="flex-shrink-0 flex items-center">
             <Link
               href="/"
-              className="text-2xl font-bold text-[var(--primary)] tracking-tight hover:text-[var(--primary-hover)] transition-all duration-200 hover:scale-105"
+              className="text-xl md:text-2xl font-bold text-[var(--primary)] tracking-tight hover:text-[var(--primary-hover)] transition-all duration-200 hover:scale-105"
             >
               FlySmart
             </Link>
@@ -58,8 +58,8 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 className={`relative px-4 py-2 font-medium transition-all duration-200 rounded-lg group ${isActive(link.href)
-                    ? 'text-[var(--primary)] bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-[var(--muted)] hover:text-[var(--fg)] hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'text-[var(--primary)] bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-[var(--muted)] hover:text-[var(--fg)] hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
               >
                 {link.label}

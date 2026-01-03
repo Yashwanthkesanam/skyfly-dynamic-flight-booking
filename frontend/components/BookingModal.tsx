@@ -28,6 +28,7 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [passengerName, setPassengerName] = useState('');
+  const [seats, setSeats] = useState(1);
 
   // Validation State
   const [formErrors, setFormErrors] = useState({ email: '', phone: '' });
@@ -96,7 +97,7 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
       // 1. Reserve Outbound
       const resOut = await bookingService.reserveFlight({
         flight_id: Number(flight.id),
-        seats: 1,
+        seats: seats,
         passenger_name: passengerName,
         passenger_contact: email
       });
@@ -107,7 +108,7 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
       if (returnFlight) {
         resRet = await bookingService.reserveFlight({
           flight_id: Number(returnFlight.id),
-          seats: 1,
+          seats: seats,
           passenger_name: passengerName,
           passenger_contact: email
         });
@@ -217,6 +218,7 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
     setResIdRet(null);
     setLoading(false);
     setTimeLeft(null);
+    setSeats(1);
     onClose();
   };
 
@@ -226,7 +228,7 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const totalPrice = (flight?.dynamic_price || 0) + (returnFlight?.dynamic_price || 0);
+  const totalPrice = ((flight?.dynamic_price || 0) + (returnFlight?.dynamic_price || 0)) * seats;
 
   return (
     <Modal isOpen={isOpen} onClose={pnrOut ? reset : onClose} title={step === 'success' ? 'Booking Confirmed!' : step === 'details' ? 'Passenger Details' : 'Complete Booking'}>
@@ -257,16 +259,16 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
               </div>
 
               {/* Route & Times */}
-              <div className="flex justify-between items-center relative py-2">
+              <div className="flex flex-col sm:flex-row justify-between items-center relative py-2 gap-4 sm:gap-0">
                 {/* Origin */}
-                <div className="text-left min-w-[30%]">
+                <div className="text-center sm:text-left min-w-[30%]">
                   <div className="text-2xl font-black text-[var(--fg)]">{flight?.departure_time.split('T')[1].substr(0, 5)}</div>
                   <div className="text-sm font-semibold text-[var(--muted)]">{flight?.origin}</div>
                   <div className="text-xs text-gray-400 mt-1">{flight?.date}</div>
                 </div>
 
                 {/* Duration / Divider */}
-                <div className="flex-1 flex flex-col items-center px-2">
+                <div className="flex-1 flex flex-col items-center px-2 w-full sm:w-auto">
                   <div className="text-xs text-[var(--muted)] mb-1">
                     {Math.floor((flight?.duration_minutes || 0) / 60)}h {(flight?.duration_minutes || 0) % 60}m
                   </div>
@@ -276,15 +278,13 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
                       <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     </div>
                     {/* Plane Icon */}
-                    <svg className="w-4 h-4 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 motion-safe:group-hover:translate-x-4 transition-transform duration-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                    </svg>
+                    <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-500">✈️</span>
                   </div>
                   <div className="text-xs text-gray-400 mt-1">Non-stop</div>
                 </div>
 
                 {/* Destination */}
-                <div className="text-right min-w-[30%]">
+                <div className="text-center sm:text-right min-w-[30%]">
                   <div className="text-2xl font-black text-[var(--fg)]">{flight?.arrival_time.split('T')[1].substr(0, 5)}</div>
                   <div className="text-sm font-semibold text-[var(--muted)]">{flight?.destination}</div>
                 </div>
@@ -301,6 +301,35 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
 
             {/* Bottom Section (Return Flight or Price) */}
             <div className="p-5 bg-gray-50 dark:bg-gray-700/30">
+              <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-600 pb-4">
+                <div className="text-sm font-bold text-[var(--fg)]">Passengers</div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSeats(Math.max(1, seats - 1))}
+                    className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                    disabled={seats <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="font-bold text-lg w-4 text-center">{seats}</span>
+                  {(() => {
+                    const maxSeatsOut = flight?.seats_available ?? 1;
+                    const maxSeatsRet = returnFlight ? (returnFlight.seats_available ?? 1) : maxSeatsOut;
+                    const maxSeats = Math.min(maxSeatsOut, maxSeatsRet);
+
+                    return (
+                      <button
+                        onClick={() => setSeats(Math.min(maxSeats, seats + 1))}
+                        className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                        disabled={seats >= maxSeats}
+                      >
+                        +
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {returnFlight ? (
                 <div className="space-y-4">
                   {/* Return Flight Mini-ticket */}
@@ -316,14 +345,14 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
                   </div>
 
                   <div className="flex justify-between items-center border-t border-dashed border-gray-300 dark:border-gray-600 pt-3">
-                    <div className="text-sm text-[var(--muted)]">Total Fare (2 Flights)</div>
+                    <div className="text-sm text-[var(--muted)]">Total Fare ({seats} Passengers)</div>
                     <div className="text-xl font-black text-blue-600 dark:text-blue-400">₹{totalPrice.toLocaleString()}</div>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Total Fee</div>
+                    <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Total Fee ({seats} Pax)</div>
                     <div className="text-xs text-gray-400">Includes taxes & surcharges</div>
                   </div>
                   <div className="text-right">
