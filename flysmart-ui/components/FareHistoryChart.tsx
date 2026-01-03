@@ -29,42 +29,52 @@ export default function FareHistoryChart({ flightId, currentPrice }: FareHistory
 
     if (history.length === 0) {
         return (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-[var(--muted)]">
                 <p className="text-sm">No price history available yet</p>
             </div>
         );
     }
 
-    const prices = history.map(h => h.new_price);
-    const maxPrice = Math.max(...prices, currentPrice);
-    const minPrice = Math.min(...prices, currentPrice);
+    // Filter out invalid data points
+    const validHistory = history.filter(h => h.new_price != null && !isNaN(h.new_price));
+
+    // Recalculate based on valid history
+    const prices = validHistory.map(h => h.new_price);
+    const safeCurrentPrice = currentPrice || 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices, safeCurrentPrice) : safeCurrentPrice;
+    const minPrice = prices.length > 0 ? Math.min(...prices, safeCurrentPrice) : safeCurrentPrice;
     const priceRange = maxPrice - minPrice || 1;
+
+    // Use validHistory for rendering
+    const chartHistory = validHistory;
 
     return (
         <div className="space-y-4">
             {/* Chart Header */}
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Price History</h3>
+                <h3 className="text-lg font-semibold text-[var(--fg)]">Price History</h3>
                 <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">₹{currentPrice.toFixed(2)}</div>
-                    <div className="text-xs text-gray-500">Current Price</div>
+                    <div className="text-2xl font-bold text-[var(--fg)]">₹{(currentPrice || 0).toFixed(2)}</div>
+                    <div className="text-xs text-[var(--muted)]">Current Price</div>
                 </div>
             </div>
 
             {/* Simple Line Chart */}
-            <div className="relative h-40 bg-gradient-to-b from-blue-50 to-white rounded-lg p-4 border border-gray-200">
+            <div className="relative h-40 bg-gradient-to-b from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800/50 rounded-lg p-4 border border-[var(--border)]">
                 <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
                     {/* Grid lines */}
-                    <line x1="0" y1="25" x2="400" y2="25" stroke="#e5e7eb" strokeWidth="0.5" />
-                    <line x1="0" y1="50" x2="400" y2="50" stroke="#e5e7eb" strokeWidth="0.5" />
-                    <line x1="0" y1="75" x2="400" y2="75" stroke="#e5e7eb" strokeWidth="0.5" />
+                    <line x1="0" y1="25" x2="400" y2="25" stroke="currentColor" strokeWidth="0.5" className="text-gray-300 dark:text-gray-600" />
+                    <line x1="0" y1="50" x2="400" y2="50" stroke="currentColor" strokeWidth="0.5" className="text-gray-300 dark:text-gray-600" />
+                    <line x1="0" y1="75" x2="400" y2="75" stroke="currentColor" strokeWidth="0.5" className="text-gray-300 dark:text-gray-600" />
 
                     {/* Price line */}
                     <polyline
-                        points={history.map((h, i) => {
-                            const x = (i / (history.length - 1 || 1)) * 400;
+                        points={chartHistory.map((h, i) => {
+                            const x = (i / (chartHistory.length - 1 || 1)) * 400;
                             const y = 100 - ((h.new_price - minPrice) / priceRange) * 80 - 10;
-                            return `${x},${y}`;
+                            // Ensure y is a number, fallback for safety though we filtered input
+                            const safeY = isNaN(y) ? 50 : y;
+                            return `${x},${safeY}`;
                         }).join(' ')}
                         fill="none"
                         stroke="url(#priceGradient)"
@@ -82,27 +92,28 @@ export default function FareHistoryChart({ flightId, currentPrice }: FareHistory
                     </defs>
 
                     {/* Data points */}
-                    {history.map((h, i) => {
-                        const x = (i / (history.length - 1 || 1)) * 400;
+                    {chartHistory.map((h, i) => {
+                        const x = (i / (chartHistory.length - 1 || 1)) * 400;
                         const y = 100 - ((h.new_price - minPrice) / priceRange) * 80 - 10;
+                        const safeY = isNaN(y) ? 50 : y;
                         return (
                             <circle
                                 key={h.id}
                                 cx={x}
-                                cy={y}
+                                cy={safeY}
                                 r="4"
                                 fill="#3b82f6"
                                 className="hover:r-6 transition-all cursor-pointer"
                             >
-                                <title>₹{h.new_price.toFixed(2)} - {h.reason}</title>
+                                <title>₹{(h.new_price || 0).toFixed(2)} - {h.reason}</title>
                             </circle>
                         );
                     })}
                 </svg>
 
                 {/* Price range labels */}
-                <div className="absolute top-2 left-2 text-xs text-gray-500">₹{maxPrice.toFixed(0)}</div>
-                <div className="absolute bottom-2 left-2 text-xs text-gray-500">₹{minPrice.toFixed(0)}</div>
+                <div className="absolute top-2 left-2 text-xs text-[var(--muted)]">₹{maxPrice.toFixed(0)}</div>
+                <div className="absolute bottom-2 left-2 text-xs text-[var(--muted)]">₹{minPrice.toFixed(0)}</div>
             </div>
 
             {/* Price change events */}
@@ -112,41 +123,41 @@ export default function FareHistoryChart({ flightId, currentPrice }: FareHistory
                         key={item.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm"
+                        className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm"
                     >
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${item.old_price && item.new_price > item.old_price
-                                    ? 'bg-red-500'
-                                    : 'bg-green-500'
+                                ? 'bg-red-500'
+                                : 'bg-green-500'
                                 }`} />
-                            <span className="text-gray-600 text-xs">{item.reason}</span>
+                            <span className="text-[var(--muted)] text-xs">{item.reason}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {item.old_price && (
                                 <>
-                                    <span className="text-gray-400 line-through text-xs">₹{item.old_price.toFixed(0)}</span>
-                                    <span className="text-gray-400">→</span>
+                                    <span className="text-[var(--muted)] line-through text-xs">₹{(item.old_price || 0).toFixed(0)}</span>
+                                    <span className="text-[var(--muted)]">→</span>
                                 </>
                             )}
-                            <span className="font-semibold text-gray-900">₹{item.new_price.toFixed(0)}</span>
+                            <span className="font-semibold text-[var(--fg)]">₹{(item.new_price || 0).toFixed(0)}</span>
                         </div>
                     </motion.div>
                 ))}
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[var(--border)]">
                 <div className="text-center">
-                    <div className="text-xs text-gray-500">Lowest</div>
-                    <div className="text-lg font-bold text-green-600">₹{minPrice.toFixed(0)}</div>
+                    <div className="text-xs text-[var(--muted)]">Lowest</div>
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400">₹{minPrice.toFixed(0)}</div>
                 </div>
                 <div className="text-center">
-                    <div className="text-xs text-gray-500">Highest</div>
-                    <div className="text-lg font-bold text-red-600">₹{maxPrice.toFixed(0)}</div>
+                    <div className="text-xs text-[var(--muted)]">Highest</div>
+                    <div className="text-lg font-bold text-red-600 dark:text-red-400">₹{maxPrice.toFixed(0)}</div>
                 </div>
                 <div className="text-center">
-                    <div className="text-xs text-gray-500">Changes</div>
-                    <div className="text-lg font-bold text-blue-600">{history.length}</div>
+                    <div className="text-xs text-[var(--muted)]">Changes</div>
+                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{history.length}</div>
                 </div>
             </div>
         </div>

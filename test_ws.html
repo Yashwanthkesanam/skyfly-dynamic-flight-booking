@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #log { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; background: #f9f9f9; }
+        .status { font-weight: bold; margin-bottom: 10px; }
+        .connected { color: green; }
+        .disconnected { color: red; }
+    </style>
+</head>
+<body>
+    <h2>WebSocket Connection Test</h2>
+    <div class="status">Status: <span id="status" class="disconnected">Disconnected</span></div>
+    <div id="log"></div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const statusSpan = document.getElementById('status');
+        const wsUrl = 'ws://localhost:8000/ws/feeds';
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        try {
+            log(`Connecting to ${wsUrl}...`);
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                statusSpan.textContent = 'Connected';
+                statusSpan.className = 'connected';
+                log('Connection Established!');
+                
+                // Send a test ping
+                log('Sending: ping');
+                ws.send('ping');
+            };
+
+            ws.onmessage = (event) => {
+                log(`Received: ${event.data}`);
+            };
+
+            ws.onerror = (error) => {
+                log(`Error: ${JSON.stringify(error)}`);
+                console.error(error);
+            };
+
+            ws.onclose = (event) => {
+                statusSpan.textContent = 'Disconnected';
+                statusSpan.className = 'disconnected';
+                log(`Closed: Code ${event.code}, Reason: ${event.reason}`);
+            };
+        } catch (e) {
+            log(`Exception: ${e.message}`);
+        }
+    </script>
+</body>
+</html>

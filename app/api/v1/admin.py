@@ -7,7 +7,7 @@ import csv
 import io
 from datetime import datetime
 from app.api.deps import get_db
-from app.models import Flight
+from app.db.models import Flight
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])

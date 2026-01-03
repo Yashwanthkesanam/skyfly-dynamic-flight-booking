@@ -13,7 +13,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Basic normalization or logging could happen here
-    console.error('API Error:', error.response?.data || error.message);
+    const errorData = error.response?.data || error.message;
+    console.error('API Error:', typeof errorData === 'object' ? JSON.stringify(errorData, null, 2) : errorData);
     return Promise.reject(error);
   }
 );

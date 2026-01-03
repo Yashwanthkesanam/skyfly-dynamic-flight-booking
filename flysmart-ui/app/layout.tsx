@@ -5,6 +5,7 @@ import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ErrorBoundary from '../components/ErrorBoundary';
+import ThemeProvider from '../components/ThemeProvider';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
@@ -20,16 +21,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex flex-col min-h-screen bg-[var(--bg)] text-[var(--fg)]">
-        <ErrorBoundary>
-          <Providers>
-            <Header />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-            <Toaster />
-          </Providers>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <Providers>
+              <Header />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+              <Toaster />
+            </Providers>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

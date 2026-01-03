@@ -178,14 +178,26 @@ export const generatePDFReceipt = (receipt: ReceiptData) => {
     doc.setFont('helvetica', 'bold');
     doc.text('Departure:', 25, y);
     doc.setFont('helvetica', 'normal');
-    const depDate = new Date(receipt.flight.departure_iso).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    doc.text(depDate, 70, y);
+    let depFormatted = 'N/A';
+    if (receipt.flight.departure_iso) {
+        try {
+            const depDate = new Date(receipt.flight.departure_iso);
+            if (!isNaN(depDate.getTime())) {
+                depFormatted = `${depDate.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                })}, ${depDate.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })}`;
+            }
+        } catch (e) {
+            depFormatted = 'Invalid Date';
+        }
+    }
+    doc.text(depFormatted, 70, y);
 
     y += 7;
 
@@ -193,14 +205,26 @@ export const generatePDFReceipt = (receipt: ReceiptData) => {
     doc.setFont('helvetica', 'bold');
     doc.text('Arrival:', 25, y);
     doc.setFont('helvetica', 'normal');
-    const arrDate = new Date(receipt.flight.arrival_iso).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    doc.text(arrDate, 70, y);
+    let arrFormatted = 'N/A';
+    if (receipt.flight.arrival_iso) {
+        try {
+            const arrDate = new Date(receipt.flight.arrival_iso);
+            if (!isNaN(arrDate.getTime())) {
+                arrFormatted = `${arrDate.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                })}, ${arrDate.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })}`;
+            }
+        } catch (e) {
+            arrFormatted = 'Invalid Date';
+        }
+    }
+    doc.text(arrFormatted, 70, y);
 
     y += 15;
 

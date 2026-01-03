@@ -16,6 +16,7 @@ venv/
 # ---- SQLite Database ----
 flights.db
 *.db
+!flights_new.db
 *.db-wal
 *.db-shm
 flights.db.bak

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flysmart_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./flights_new.db
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - SKYFLY_DEBUG=true
+    volumes:
+      - ./flights_new.db:/app/flights_new.db  # Persist DB
+    networks:
+      - flysmart-network
+
+  frontend:
+    build:
+      context: ./flysmart-ui
+      dockerfile: Dockerfile
+    container_name: flysmart_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # This is accessed at BUILD time for Next.js, but also runtime if using public runtime config
+      # IMPORTANT: Client-side fetches from browser need the public URL
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - flysmart-network
+
+networks:
+  flysmart-network:
+    driver: bridge

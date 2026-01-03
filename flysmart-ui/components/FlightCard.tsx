@@ -1,10 +1,9 @@
-// FILE: components/FlightCard.tsx
 'use client';
 
 import { FlightItem } from '../types';
 import { format, parseISO } from 'date-fns';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ChartBarIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import DemandIndicator from './DemandIndicator';
 import FareHistoryChart from './FareHistoryChart';
@@ -14,12 +13,36 @@ interface FlightCardProps {
   flight: FlightItem;
   onReserve: (flight: FlightItem) => void;
   onShowBreakdown: (flight: FlightItem) => void;
+  hideBookButton?: boolean;
+  isSelected?: boolean;
+  selectionMode?: boolean;
 }
 
-export default function FlightCard({ flight, onReserve, onShowBreakdown }: FlightCardProps) {
+function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSelected, selectionMode }: FlightCardProps) {
   const [showFareHistory, setShowFareHistory] = useState(false);
 
-  const formatTime = (isoString: string) => format(parseISO(isoString), 'HH:mm');
+  const formatTime = (isoString: string) => {
+    try {
+      // More robust validation
+      if (!isoString || typeof isoString !== 'string') {
+        console.warn('[FlightCard] Invalid time string:', isoString);
+        return '--:--';
+      }
+
+      const parsed = parseISO(isoString);
+
+      // Check if the parsed date is valid BEFORE calling format
+      if (!parsed || isNaN(parsed.getTime())) {
+        console.warn('[FlightCard] Failed to parse time:', isoString);
+        return '--:--';
+      }
+
+      return format(parsed, 'HH:mm');
+    } catch (error) {
+      console.error('[FlightCard] Error formatting time:', isoString, error);
+      return '--:--';
+    }
+  };
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
@@ -39,7 +62,7 @@ export default function FlightCard({ flight, onReserve, onShowBreakdown }: Fligh
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card bg-[var(--surface)] p-5 mb-4 flex flex-col gap-4 hover:shadow-lg transition-all border border-[var(--border)] rounded-xl relative overflow-hidden"
+        className={`card bg-[var(--surface)] p-5 mb-4 flex flex-col gap-4 hover:shadow-lg transition-all border rounded-xl relative overflow-hidden ${isSelected ? 'border-2 border-primary bg-blue-50/50 dark:bg-blue-900/10' : 'border-[var(--border)]'}`}
       >
         {/* Price increase badge */}
         {priceIncrease > 5 && (
@@ -66,18 +89,18 @@ export default function FlightCard({ flight, onReserve, onShowBreakdown }: Fligh
               <div className="text-sm text-[var(--muted)] font-medium">{flight.origin}</div>
             </div>
 
-            <div className="flex-grow px-4 flex flex-col items-center">
-              <div className="text-xs text-[var(--muted)] mb-1 font-medium">{formatDuration(flight.duration_minutes)}</div>
+            <div className="flex-grow px-4 flex flex-col items-center justify-center min-w-[140px]">
+              <div className="text-sm text-[var(--muted)] mb-2 font-bold whitespace-nowrap">{formatDuration(flight.duration_minutes)}</div>
               <div className="w-full h-[2px] bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 relative">
                 <div className="absolute top-1/2 left-0 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500"></div>
                 <div className="absolute top-1/2 right-0 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500"></div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <div className="text-[10px] bg-[var(--surface)] px-2 py-0.5 rounded-full text-[var(--muted)] font-medium border border-[var(--border)]">
+                  <div className="text-xs bg-[var(--surface)] px-2 py-0.5 rounded-full text-[var(--muted)] font-medium border border-[var(--border)]">
                     ✈️
                   </div>
                 </div>
               </div>
-              <div className="text-[10px] text-[var(--muted)] mt-1 font-medium">Non-stop</div>
+              <div className="text-xs text-[var(--fg)] mt-2 font-semibold whitespace-nowrap">Non-stop</div>
             </div>
 
             <div className="text-center">
@@ -108,12 +131,19 @@ export default function FlightCard({ flight, onReserve, onShowBreakdown }: Fligh
               </div>
             </div>
 
-            <button
-              onClick={() => onReserve(flight)}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-8 rounded-lg transition-all w-full shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
-            >
-              Book Now
-            </button>
+            {!hideBookButton && (
+              <button
+                onClick={() => onReserve(flight)}
+                className={`w-full font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 ${selectionMode
+                  ? isSelected
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-orange-500/30'
+                    : 'bg-transparent border-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                  : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                  }`}
+              >
+                {selectionMode ? (isSelected ? 'Selected' : 'Select') : 'Book Now'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -157,3 +187,5 @@ export default function FlightCard({ flight, onReserve, onShowBreakdown }: Fligh
     </>
   );
 }
+
+export default memo(FlightCard);

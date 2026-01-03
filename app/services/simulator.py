@@ -10,6 +10,7 @@ try:
 except Exception:
     _HAS_ZONEINFO = False
 from typing import Optional
+import asyncio
 
 from app.db.base import SessionLocal
 from app.db import models
@@ -18,21 +19,17 @@ from app.services.pricing import calculate_price
 # ----------------------------
 # Config: schedule (IST)
 # ----------------------------
-# User schedule (as requested):
-# 09:00–12:00 -> 8 minute updates
-# 12:00–18:00 -> 20 minute updates
-# 18:00–21:00 -> 8 minute updates
-# 21:00–24:00 -> 90 minute updates
-# 00:00–06:00 -> 6 hour updates
-# 06:00–09:00 -> fallback (30 minutes)
+# DEMO MODE: Fast updates for demonstrations (1-2 minutes)
+# Peak hours: 1 minute updates
+# Off-peak: 2 minute updates
 _SCHEDULE = [
-    ((9, 12), 8 * 60),        # 09:00 - 11:59 -> 8 minutes
-    ((12, 18), 20 * 60),      # 12:00 - 17:59 -> 20 minutes
-    ((18, 21), 8 * 60),       # 18:00 - 20:59 -> 8 minutes
-    ((21, 24), 90 * 60),      # 21:00 - 23:59 -> 90 minutes
-    ((0, 6), 6 * 60 * 60),    # 00:00 - 05:59 -> 6 hours
+    ((9, 12), 60),           # 09:00 - 11:59 -> 1 minute
+    ((12, 18), 90),          # 12:00 - 17:59 -> 1.5 minutes
+    ((18, 21), 60),          # 18:00 - 20:59 -> 1 minute
+    ((21, 24), 120),         # 21:00 - 23:59 -> 2 minutes
+    ((0, 6), 120),           # 00:00 - 05:59 -> 2 minutes
 ]
-_FALLBACK_INTERVAL = 30 * 60   # 06:00 - 08:59 -> 30 minutes
+_FALLBACK_INTERVAL = 90      # 06:00 - 08:59 -> 1.5 minutes
 
 # Behavior knobs
 BATCH_SIZE = 6      # how many flights to sample per tick
@@ -76,6 +73,36 @@ def current_interval_preview() -> int:
     return _interval_for_now_ist()
 
 
+def _broadcast_flight_update(flight, timestamp: str):
+    """
+    Safely broadcast flight update via WebSocket.
+    This is called from synchronous code, so we need to handle async carefully.
+    """
+    try:
+        from app.utils.websocket_manager import manager
+        
+        message = {
+            "type": "flight_update",
+            "flight_id": flight.id,
+            "flight_number": flight.flight_number,
+            "price": float(flight.price_real),
+            "seats": flight.seats_available,
+            "timestamp": timestamp
+        }
+        
+        # Try to get running event loop, or create a new one
+        try:
+            loop = asyncio.get_running_loop()
+            # Schedule the coroutine in the existing loop
+            asyncio.create_task(manager.broadcast(message))
+        except RuntimeError:
+            # No running loop, create a new one and run the broadcast
+            asyncio.run(manager.broadcast(message))
+    except Exception:
+        # Silently fail - don't break simulator if WebSocket fails
+        pass
+
+
 # ----------------------------
 # DB update logic
 # ----------------------------
@@ -86,7 +113,12 @@ def _update_one(db, flight):
       - random-walk demand score (persist to demand_scores)
       - recalculate dynamic price via calculate_price(), persist to fare_history if changed
       - enforce cooldown using last_price_updated and DEFAULT_MIN_UPDATE_SECONDS
+      - broadcast updates via WebSocket
     """
+    update_occurred = False
+    now_utc = datetime.now(timezone.utc)
+    timestamp_iso = now_utc.isoformat()
+    
     try:
         # small random bookings
         if flight.seats_available > 0 and random.random() < 0.25:
@@ -94,6 +126,7 @@ def _update_one(db, flight):
             flight.seats_available = max(0, flight.seats_available - taken)
             b = models.Booking(flight_id=flight.id, seats_booked=taken, price_paid=flight.price_real)
             db.add(b)
+            update_occurred = True
 
         # demand score update (small random walk)
         ds = db.query(models.DemandScore).filter(models.DemandScore.flight_id == flight.id).first()
@@ -113,12 +146,14 @@ def _update_one(db, flight):
         # -------------------------
         # dynamic pricing calculation
         # -------------------------
-        now_utc = datetime.now(timezone.utc)
         new_price, breakdown = calculate_price(flight, demand_score=ds.score, now=now_utc)
         old_price = float(getattr(flight, "price_real", 0.0))
 
         # if no candidate price, skip
         if new_price is None:
+            # Broadcast if seats changed even without price change
+            if update_occurred:
+                _broadcast_flight_update(flight, timestamp_iso)
             return
 
         # Check cooldown: only persist if cooldown elapsed
@@ -140,12 +175,17 @@ def _update_one(db, flight):
                 db.add(fh)
                 flight.price_real = float(new_price)
                 flight.last_price_updated = now_utc_iso()
+                update_occurred = True
             else:
                 # change too small — skip price update but STILL update timestamp
                 flight.last_price_updated = now_utc_iso()
         else:
             # cooldown active — skip persistence
             pass
+        
+        # Broadcast update if any change occurred
+        if update_occurred:
+            _broadcast_flight_update(flight, timestamp_iso)
 
     except Exception as e:
         # don't raise — caller will handle rollback
@@ -230,8 +270,14 @@ def stop():
 
 def status() -> dict:
     """Return a small diagnostic useful for debug/demo."""
+    interval = current_interval_preview()
+    # Calculate crude acceleration: if 1 hour (3600s) is "1x", then 60s is "60x".
+    acc = 3600.0 / (interval if interval > 0 else 3600)
+    
     return {
         "running": bool(_thread and _thread.is_alive()),
         "override_interval": _override_interval,
-        "current_interval_seconds": current_interval_preview()
+        "current_interval_seconds": interval,
+        "time_acceleration": round(acc, 1),
+        "current_time": datetime.now(timezone.utc).isoformat()
     }

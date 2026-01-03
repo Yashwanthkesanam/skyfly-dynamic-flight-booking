@@ -183,3 +183,30 @@ html {
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* WebSocket update indicator animation */
+@keyframes pulse-fade {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-5px);
+  }
+
+  10% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  90% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-3px);
+  }
+}
+
+.animate-pulse-fade {
+  animation: pulse-fade 3s ease-in-out;
+}

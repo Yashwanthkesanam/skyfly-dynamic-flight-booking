@@ -9,10 +9,10 @@ const fetchFlights = async (params: SearchParams): Promise<FlightItem[]> => {
   return await flightService.searchFlights(params);
 };
 
-export const useFlights = (params: SearchParams) => {
+export const useFlights = (params: SearchParams, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['flights', params],
     queryFn: () => fetchFlights(params),
-    enabled: !!params.origin && !!params.destination && !!params.date,
+    enabled: options?.enabled !== false && !!params.origin && !!params.destination && !!params.date,
   });
 };

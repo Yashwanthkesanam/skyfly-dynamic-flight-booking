@@ -318,9 +318,9 @@ def api_search_flights(
             "airline": str(f.airline),
             "origin": str(f.origin),
             "destination": str(f.destination),
-            # human-friendly departure/arrival (IST)
-            "departure_iso": _human_field(getattr(f, "departure_iso", None)),
-            "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+            # Return actual ISO format for frontend date parsing
+            "departure_iso": str(getattr(f, "departure_iso", "")),
+            "arrival_iso": str(getattr(f, "arrival_iso", "")),
             "duration_min": int(f.duration_min),
             "price_real": float(f.price_real),
             "base_price": base_price,
@@ -441,8 +441,9 @@ def api_route_search(
             "airline": str(f.airline),
             "origin": str(f.origin),
             "destination": str(f.destination),
-            "departure_iso": _human_field(getattr(f, "departure_iso", None)),
-            "arrival_iso": _human_field(getattr(f, "arrival_iso", None)),
+            # Return actual ISO format for frontend date parsing
+            "departure_iso": str(getattr(f, "departure_iso", "")),
+            "arrival_iso": str(getattr(f, "arrival_iso", "")),
             "duration_min": int(f.duration_min),
             "price_real": float(f.price_real),
             "base_price": base_price,

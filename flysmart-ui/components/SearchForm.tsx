@@ -13,6 +13,7 @@ import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/solid";
 
 export default function SearchForm() {
   const router = useRouter();
+  // Trip Type is now hardcoded to 'oneway'
   const [tripType, setTripType] = useState<"oneway" | "roundtrip" | "multicity">("oneway");
   const [from, setFrom] = useState("Delhi");
   const [to, setTo] = useState("Bengaluru");
@@ -128,6 +129,8 @@ export default function SearchForm() {
     <div className="w-full max-w-6xl mx-auto bg-[var(--surface)] rounded-lg shadow-xl p-6 relative z-50 search-card transition-colors">
       <form id="flysmart-search-form" onSubmit={handleSearch}>
 
+        {/* Top: Trip Type & Text */}
+        {/* Top: Trip Type & Text */}
         {/* Top: Trip Type & Text */}
         <div className="flex justify-between items-center mb-5">
           <div className="flex items-center space-x-6 text-sm font-medium text-[var(--muted)]">

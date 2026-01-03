@@ -30,27 +30,35 @@ export default function Home() {
 
       {/* Hero Section */}
       <div className="relative bg-[#051429] pt-20 pb-32 md:pt-28 md:pb-40 px-4 sm:px-6 lg:px-8">
-        {/* Simple background pattern or gradient */}
-        <div className="absolute inset-0 z-0 opacity-20 bg-[url('/hero-bg.jpg')] bg-cover bg-center" />
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#051429] via-transparent to-[#051429]" />
+        {/* Background image with light overlay (uses /public/images/hero1.jpg) */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            // very light neutral overlay so image colors show through (no blue tint)
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.22)), url('/images/hero2.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
 
         <div className="relative z-10 max-w-7xl mx-auto flex flex-col items-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-3xl md:text-5xl font-extrabold text-white text-center mb-6 tracking-tight"
+            className="text-5xl md:text-7xl font-extrabold text-white text-center mb-8 tracking-tighter drop-shadow-2xl"
           >
-            Smart Flights. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">Smarter Prices.</span>
+            Smart Flights. <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-blue-400 to-cyan-300">Smarter Prices.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-gray-300 text-center text-sm md:text-lg max-w-2xl mb-12"
+            className="text-blue-50 text-center text-lg md:text-xl font-medium max-w-3xl mb-14 drop-shadow-lg leading-relaxed"
           >
-            Experience dynamic pricing that adjusts to demand. Book at the right time and save more on your travel.
+            Get the best fares with real-time pricing. Book smart and save more on every trip.
           </motion.p>
 
           {/* Main Search Card Container */}

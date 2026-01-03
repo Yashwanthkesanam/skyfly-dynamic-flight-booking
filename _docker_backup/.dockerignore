@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+.git
+.gitignore
+flysmart-ui/
+htmlcov/
+.pytest_cache/

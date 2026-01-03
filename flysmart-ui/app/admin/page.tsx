@@ -7,21 +7,33 @@ import { flightService } from '../../lib/services/flightService';
 import { FlightItem } from '../../types';
 import Spinner from '../../components/Spinner';
 import CSVUploader from '../../components/CSVUploader';
+import { authService } from '../../lib/utils/auth';
+import { TableRowSkeleton } from '../../components/Skeleton';
 
 export default function AdminPage() {
   const router = useRouter();
+  const [authChecking, setAuthChecking] = useState(true);
   const [status, setStatus] = useState<SimulatorStatus | null>(null);
   const [flights, setFlights] = useState<FlightItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    // Check authentication
+    if (!authService.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    // Auth passed, show content
+    setAuthChecking(false);
+
     const interval = setInterval(fetchStatus, 2000); // Poll status
     fetchStatus();
     fetchFlights();
 
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
   const fetchStatus = async () => {
     try {
@@ -58,10 +70,33 @@ export default function AdminPage() {
     }
   };
 
+  const handleLogout = () => {
+    authService.logout();
+    router.push('/');
+  };
+
+  // Show loading while checking auth
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+        <div className="text-center">
+          <Spinner className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+          <p className="text-[var(--muted)]">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-[var(--fg)]">Admin Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+        >
+          Logout
+        </button>
       </div>
 
       {/* Simulator Control */}
@@ -127,7 +162,24 @@ export default function AdminPage() {
         </div>
 
         {loading ? (
-          <div className="p-10 flex justify-center"><Spinner className="w-8 h-8 text-[var(--muted)]" /></div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase">Flight</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase">Route</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase">Seats</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase">Price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {[...Array(8)].map((_, i) => (
+                  <TableRowSkeleton key={i} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-[var(--muted)]">

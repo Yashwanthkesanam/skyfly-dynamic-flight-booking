@@ -1,0 +1,25 @@
+2025-12-09 09:06:52,619 WARNING [skyfly] Failed to include router app.api.v1.admin: ("No module named 'app.models'",)
+2025-12-09 09:06:52,763 INFO [skyfly] Included router app.api.v1.flights
+2025-12-09 09:06:52,768 INFO [skyfly] Included router app.api.v1.feeds
+2025-12-09 09:06:52,859 INFO [skyfly] Included router app.api.v1.bookings
+2025-12-09 09:06:52,865 INFO [skyfly] Included router app.api.v1.pricing with prefix=/api/v1
+2025-12-09 09:06:52,871 INFO [skyfly] Included router app.api.v1.simulator with prefix=/api/v1/simulator
+2025-12-09 09:06:52,875 INFO [skyfly] Included router app.api.v1.websocket
+2025-12-09 09:06:52,876 INFO [skyfly] Simulator service module imported.
+Traceback (most recent call last):
+  File "E:\yashwanth files\infosys intern\flysmart\verify_ws_config.py", line 11, in <module>
+    print("\u2705 Successfully imported app from main.py")
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\yashwanth files\infosys intern\flysmart\verify_ws_config.py", line 58, in <module>
+    print(f"\u274c Error: {e}")
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
