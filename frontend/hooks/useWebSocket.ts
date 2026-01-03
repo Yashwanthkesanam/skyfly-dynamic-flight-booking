@@ -1,4 +1,4 @@
- // hooks/useWebSocket.ts
+// hooks/useWebSocket.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -20,7 +20,11 @@ interface UseWebSocketReturn {
     reconnect: () => void;
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || '';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
+
+if (!WS_URL) {
+    if (typeof window !== 'undefined') console.warn('WebSocket URL is not defined. Real-time updates will be disabled.');
+}
 const RECONNECT_DELAY = 3000; // 3 seconds
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 
@@ -43,6 +47,7 @@ export function useWebSocket(): UseWebSocketReturn {
                 wsRef.current.close();
             }
 
+            if (!WS_URL) return;
             const ws = new WebSocket(WS_URL);
             wsRef.current = ws;
 
