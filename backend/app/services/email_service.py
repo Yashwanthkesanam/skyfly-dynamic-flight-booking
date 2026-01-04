@@ -11,8 +11,8 @@ load_dotenv()
 
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME", "yashwanthece452@gmail.com")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "acsbjycyijgvyfie")  # App Password (spaces removed)
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")  # Must be set in .env file
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")  # Must be set in .env file
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", SMTP_USERNAME)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://skyfly-dynamic-flight-booking.vercel.app")
 
