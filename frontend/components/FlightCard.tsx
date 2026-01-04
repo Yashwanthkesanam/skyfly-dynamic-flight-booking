@@ -66,7 +66,10 @@ function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSele
       >
         {/* Price increase badge */}
         {priceIncrease > 5 && (
-          <div className="absolute top-0 right-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+          <div
+            onClick={() => onShowBreakdown(flight)}
+            className="absolute top-0 right-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all z-10"
+          >
             ↑ {priceIncrease.toFixed(0)}% from base
           </div>
         )}
@@ -152,7 +155,7 @@ function FlightCard({ flight, onReserve, onShowBreakdown, hideBookButton, isSele
               <div className="flex items-center justify-end gap-2 mt-1">
                 <button onClick={() => onShowBreakdown(flight)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline flex items-center gap-1">
                   <ChartBarIcon className="w-3 h-3" />
-                  Price Breakdown
+                  Why this price?
                 </button>
               </div>
             </div>

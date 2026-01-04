@@ -14,7 +14,7 @@ import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/solid";
 export default function SearchForm() {
   const router = useRouter();
   // Trip Type is now hardcoded to 'oneway'
-  const [tripType, setTripType] = useState<"oneway" | "roundtrip" | "multicity">("oneway");
+  const [tripType, setTripType] = useState<"oneway" | "roundtrip">("oneway");
   const [from, setFrom] = useState("Delhi");
   const [to, setTo] = useState("Bengaluru");
   const [departDate, setDepartDate] = useState<Date | null>(null);
@@ -40,6 +40,20 @@ export default function SearchForm() {
 
   const fromRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
+
+  // Custom Input for DatePicker to handle hydration warnings
+  // eslint-disable-next-line react/display-name
+  const CustomDateInput = React.forwardRef(({ value, onClick, className, placeholder }: any, ref: any) => (
+    <input
+      value={value}
+      onClick={onClick}
+      ref={ref}
+      className={className}
+      placeholder={placeholder}
+      readOnly
+      suppressHydrationWarning={true}
+    />
+  ));
 
   // -------------------------
   // Suggestion Logic
@@ -135,8 +149,6 @@ export default function SearchForm() {
       <form id="flysmart-search-form" onSubmit={handleSearch}>
 
         {/* Top: Trip Type & Text */}
-        {/* Top: Trip Type & Text */}
-        {/* Top: Trip Type & Text */}
         <div className="flex justify-between items-center mb-5">
           <div className="flex items-center space-x-6 text-sm font-medium text-[var(--muted)]">
             <label className="flex items-center space-x-2 cursor-pointer hover:text-[var(--primary)] transition-colors">
@@ -159,23 +171,13 @@ export default function SearchForm() {
               />
               <span className={tripType === 'roundtrip' ? "text-gray-900 font-bold" : ""}>Round Trip</span>
             </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="tripType"
-                checked={tripType === 'multicity'}
-                onChange={() => setTripType('multicity')}
-                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-              />
-              <span className={tripType === 'multicity' ? "text-gray-900 font-bold" : ""}>Multi City</span>
-            </label>
           </div>
           <div className="text-xs text-gray-500 hidden md:block">
             Book International and Domestic Flights
           </div>
         </div>
 
-        {/* Main Input Grid - Single Row with Dividers */}
+        {/* Main Input Grid - Single Row for OneWay/RoundTrip */}
         <div className="grid grid-cols-12 border border-[var(--border)] rounded-lg divide-y md:divide-y-0 md:divide-x divide-[var(--border)] min-h-[110px]">
 
           {/* FROM */}
@@ -220,7 +222,7 @@ export default function SearchForm() {
             />
             <span className="block text-xs text-[var(--muted)] mt-1 truncate">BLR, Bengaluru International Airport</span>
 
-            {/* Swap Icon - Mobile Centered / Desktop Absolute Left */}
+            {/* Swap Icon */}
             <div
               className="absolute left-1/2 -top-4 md:left-[-1rem] md:top-1/2 -translate-x-1/2 md:translate-x-0 md:-translate-y-1/2 w-8 h-8 rounded-full bg-[var(--surface)] shadow-md border border-[var(--border)] flex items-center justify-center text-blue-600 z-10 cursor-pointer hover:scale-110 transition-transform rotate-90 md:rotate-0"
               onClick={(e) => {
@@ -273,7 +275,7 @@ export default function SearchForm() {
                     <div className="relative z-10">{day}</div>
                   );
                 }}
-                wrapperClassName="suppress-hydration"
+                customInput={<CustomDateInput />}
               />
               <span className="block text-xs text-[var(--muted)] mt-1">
                 {departDate ? format(departDate, "EEEE") : "Select Day"}
@@ -290,7 +292,7 @@ export default function SearchForm() {
             <div className="mt-1">
               {tripType === 'oneway' ? (
                 <div onClick={() => setTripType('roundtrip')} className="h-full flex flex-col justify-center">
-                  <span className="text-sm font-bold text-[var(--muted)]">Tap to add a return date for bigger discounts</span>
+                  <span className="text-sm font-bold text-[var(--muted)]">Tap to add return date</span>
                 </div>
               ) : (
                 <>
@@ -313,7 +315,7 @@ export default function SearchForm() {
                         <div className="relative z-10">{day}</div>
                       );
                     }}
-                    wrapperClassName="suppress-hydration"
+                    customInput={<CustomDateInput />}
                   />
                   <div className="flex items-center justify-between w-full">
                     <span className="block text-xs text-[var(--muted)] mt-1">
@@ -328,7 +330,7 @@ export default function SearchForm() {
             </div>
           </div>
 
-          {/* TRAVELLERS & CLASS */}
+          {/* TRAVELLERS */}
           <div className="col-span-12 md:col-span-2 px-5 py-3 relative hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer" onClick={() => setShowTravellerPopover(!showTravellerPopover)}>
             <label className="flex items-center text-xs font-semibold text-[var(--muted)] uppercase tracking-wide gap-1 cursor-pointer">
               Travellers
@@ -336,9 +338,9 @@ export default function SearchForm() {
             </label>
             <div className="mt-1">
               <div className="text-3xl font-black text-[var(--fg)]">
-                {travellers.count} <span className="text-xl font-bold">Traveller</span>
+                {travellers.count} <span className="text-xl font-bold">Trvlr</span>
               </div>
-              <div className="text-xs text-[var(--muted)] mt-1 truncate">Selection</div>
+              <div className="text-xs text-[var(--muted)] mt-1 truncate">Total</div>
             </div>
 
             {/* Popover */}
@@ -361,9 +363,6 @@ export default function SearchForm() {
             )}
           </div>
         </div>
-
-
-
 
         {/* Submit handle is external via ref id */}
         <button type="submit" className="hidden">Submit</button>

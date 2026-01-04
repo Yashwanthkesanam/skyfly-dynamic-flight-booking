@@ -10,6 +10,17 @@ export interface BookingDetails {
     passenger_name: string;
     price_paid: number;
     created_at: string;
+    flight?: {
+        id: number;
+        flight_number: string;
+        airline: string;
+        origin: string;
+        destination: string;
+        departure_time?: string;
+        departure_iso?: string;
+        duration_min?: number;
+        flight_date?: string;
+    };
     payment_meta?: any;
 }
 

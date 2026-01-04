@@ -129,16 +129,28 @@ except Exception as e:
 # ----------------------------------------------------
 # LIFECYCLE HOOKS
 # ----------------------------------------------------
+import asyncio
+from app.utils.websocket_manager import manager
+
 @app.on_event("startup")
 def on_startup():
     logger.info("SkyFly API startup initiated.")
-    if _simulator and callable(getattr(_simulator, "start", None)):
-        try:
-            _simulator.start()
-            status = _simulator.status() if callable(getattr(_simulator, "status", None)) else {}
-            logger.info("Simulator started: %s", status)
-        except Exception:
-            logger.exception("Failed to start simulator")
+    
+    # Initialize WebSocket manager with main loop for thread-safe broadcasting
+    try:
+        loop = asyncio.get_running_loop()
+        manager.set_loop(loop)
+    except Exception as e:
+        logger.error(f"Failed to capture event loop for WebSocket manager: {e}")
+
+    # SIMULATOR AUTO-START DISABLED (Manual start via /admin only)
+    # if _simulator and callable(getattr(_simulator, "start", None)):
+    #     try:
+    #         _simulator.start()
+    #         status = _simulator.status() if callable(getattr(_simulator, "status", None)) else {}
+    #         logger.info("Simulator started: %s", status)
+    #     except Exception:
+    #         logger.exception("Failed to start simulator")
     logger.info("SkyFly API started and ready.")
 
 @app.on_event("shutdown")

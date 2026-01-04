@@ -90,14 +90,9 @@ def _broadcast_flight_update(flight, timestamp: str):
             "timestamp": timestamp
         }
         
-        # Try to get running event loop, or create a new one
-        try:
-            loop = asyncio.get_running_loop()
-            # Schedule the coroutine in the existing loop
-            asyncio.create_task(manager.broadcast(message))
-        except RuntimeError:
-            # No running loop, create a new one and run the broadcast
-            asyncio.run(manager.broadcast(message))
+        # Use thread-safe sync method
+        manager.broadcast_sync(message)
+
     except Exception:
         # Silently fail - don't break simulator if WebSocket fails
         pass
@@ -120,13 +115,30 @@ def _update_one(db, flight):
     timestamp_iso = now_utc.isoformat()
     
     try:
-        # small random bookings
-        if flight.seats_available > 0 and random.random() < 0.25:
-            taken = random.randint(1, min(3, int(flight.seats_available)))
-            flight.seats_available = max(0, flight.seats_available - taken)
-            b = models.Booking(flight_id=flight.id, seats_booked=taken, price_paid=flight.price_real)
-            db.add(b)
-            update_occurred = True
+        # Determine urgency (hours to departure)
+        departure = None
+        is_urgent = False
+        try:
+           if flight.departure_iso:
+               departure = datetime.fromisoformat(flight.departure_iso.replace("Z", "+00:00"))
+               delta = departure - now_utc
+               hours_until = delta.total_seconds() / 3600.0
+               if 0 < hours_until < 48:
+                   is_urgent = True
+        except:
+             pass
+
+        # Booking Logic: Aggressive if urgent (75% chance, 5-10 seats)
+        booking_prob = 0.75 if is_urgent else 0.25
+        max_seats = 10 if is_urgent else 3
+        
+        # Booking Logic: DISABLED (User Request - Price increase only)
+        # if flight.seats_available > 0 and random.random() < booking_prob:
+        #     taken = random.randint(1, min(max_seats, int(flight.seats_available)))
+        #     flight.seats_available = max(0, flight.seats_available - taken)
+        #     b = models.Booking(flight_id=flight.id, seats_booked=taken, price_paid=flight.price_real)
+        #     db.add(b)
+        #     update_occurred = True
 
         # demand score update (small random walk)
         ds = db.query(models.DemandScore).filter(models.DemandScore.flight_id == flight.id).first()
@@ -189,6 +201,7 @@ def _update_one(db, flight):
 
     except Exception as e:
         # don't raise — caller will handle rollback
+        # print(f"Update failed: {e}")
         pass
 
 
@@ -199,15 +212,52 @@ def tick_once():
     """
     db = SessionLocal()
     try:
-        flights = db.query(models.Flight).order_by(models.Flight.id).all()
+        flights = db.query(models.Flight).all()
         if not flights:
             return 0
-        sample = random.sample(flights, min(BATCH_SIZE, len(flights)))
+            
+        # Prioritize urgent flights (departing < 48h)
+        now = datetime.now(timezone.utc)
+        urgent_flights = []
+        other_flights = []
+        
+        for f in flights:
+            try:
+                # Parse ISO date safely
+                if f.departure_iso:
+                    dep = datetime.fromisoformat(f.departure_iso.replace("Z", "+00:00"))
+                    delta = (dep - now).total_seconds() / 3600.0
+                    if 0 < delta < 48:
+                        urgent_flights.append(f)
+                    else:
+                        other_flights.append(f)
+                else:
+                    other_flights.append(f)
+            except:
+                other_flights.append(f)
+        
+        # Mix samples: 70% urgent, 30% others
+        sample = []
+        if urgent_flights:
+            k_urgent = min(len(urgent_flights), int(BATCH_SIZE * 0.7) or 1)
+            # Ensure we don't sample more than available
+            sample.extend(random.sample(urgent_flights, min(len(urgent_flights), k_urgent)))
+            
+        remaining_slots = BATCH_SIZE - len(sample)
+        if remaining_slots > 0 and other_flights:
+            # Ensure we don't sample more than available
+            sample.extend(random.sample(other_flights, min(remaining_slots, len(other_flights))))
+            
+        # Fallback if both lists empty (unlikely if flights exist)
+        if not sample and flights: 
+             sample = random.sample(flights, min(BATCH_SIZE, len(flights)))
+
         for fl in sample:
             _update_one(db, fl)
         db.commit()
         return len(sample)
     except Exception as e:
+        print(f"Tick error: {e}")
         db.rollback()
         return 0
     finally:
@@ -281,3 +331,67 @@ def status() -> dict:
         "time_acceleration": round(acc, 1),
         "current_time": datetime.now(timezone.utc).isoformat()
     }
+
+
+def trigger_surge(city_code: str, factor: float = 0.5):
+    """
+    Manually trigger a demand spike for a specific destination.
+    e.g. 'BLR' with factor 0.5 adds +50% to current demand scores.
+    """
+    db = SessionLocal()
+    try:
+        # Find all demand scores for this destination
+        # We search by destination_code (which should be normalized, e.g. uppercase)
+        city = city_code.strip().upper()
+        
+        scores = db.query(models.DemandScore).filter(models.DemandScore.destination_code == city).all()
+        
+        count = 0
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+        for ds in scores:
+            # Boost score, cap at 1.0
+            old = ds.score
+            new_score = min(1.0, old + factor)
+            if new_score != old:
+                ds.score = new_score
+                ds.updated_at = now_str
+                count += 1
+        
+        db.commit()
+        return count
+        return count
+    except Exception as e:
+        print(f"Surge trigger failed: {e}")
+        db.rollback()
+        return 0
+    finally:
+        db.close()
+
+
+def reset_surge(city_code: str):
+    """
+    Reset demand score to baseline (0.0) for a city.
+    Stops any active "High Demand" or "Crisis" effects.
+    """
+    db = SessionLocal()
+    try:
+        city = city_code.strip().upper()
+        scores = db.query(models.DemandScore).filter(models.DemandScore.destination_code == city).all()
+        
+        count = 0
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+        for ds in scores:
+            ds.score = 0.0  # Reset to neutral/baseline
+            ds.updated_at = now_str
+            count += 1
+        
+        db.commit()
+        return count
+    except Exception as e:
+        print(f"Surge reset failed: {e}")
+        db.rollback()
+        return 0
+    finally:
+        db.close()

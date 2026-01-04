@@ -44,9 +44,24 @@ class CancelResponse(BaseModel):
     refund_amount: Optional[float] = None
     refund_meta: Optional[Dict] = None
 
+class FlightShort(BaseModel):
+    id: int
+    flight_number: str
+    airline: str
+    origin: str
+    destination: str
+    departure_iso: Optional[str]
+    arrival_iso: Optional[str]
+    duration_min: Optional[int]
+    flight_date: Optional[str]
+
+    class Config:
+        orm_mode = True
+
 class BookingOut(BaseModel):
     id: int
     flight_id: int
+    flight: Optional[FlightShort] = None
     seats_booked: int
     price_paid: Optional[float]
     price_snapshot: Optional[float] = None
@@ -63,14 +78,7 @@ class BookingOut(BaseModel):
     class Config:
         orm_mode = True
 
-class FlightShort(BaseModel):
-    id: int
-    flight_number: str
-    airline: str
-    origin: str
-    destination: str
-    departure_iso: str
-    arrival_iso: str
+
 
 class ReceiptOut(BaseModel):
     booking: BookingOut

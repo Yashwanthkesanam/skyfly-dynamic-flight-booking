@@ -11,11 +11,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+import asyncio
+
 class ConnectionManager:
     """Manages WebSocket connections and broadcasts messages to all connected clients."""
     
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self._main_loop = None
+
+    def set_loop(self, loop):
+        """Set the main event loop for thread-safe broadcasting."""
+        self._main_loop = loop
     
     async def connect(self, websocket: WebSocket):
         """Accept and register a new WebSocket connection."""
@@ -61,6 +68,18 @@ class ConnectionManager:
         # Clean up dead connections
         for dead in dead_connections:
             self.disconnect(dead)
+
+    def broadcast_sync(self, message: dict):
+        """
+        Thread-safe wrapper for broadcast.
+        Call this from background threads (like simulator).
+        """
+        if self._main_loop and not self._main_loop.is_closed():
+            asyncio.run_coroutine_threadsafe(self.broadcast(message), self._main_loop)
+        else:
+            # Fallback (risky if loop is different, but keeps old behavior if loop not set)
+            # Actually, doing nothing is safer than crashing main thread.
+            pass
 
 
 # Global singleton instance

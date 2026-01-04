@@ -73,6 +73,7 @@ export default function Header() {
           <div className="flex items-center">
             <button
               onClick={handleAuthClick}
+              suppressHydrationWarning={true}
               className="px-4 py-2 text-[var(--muted)] hover:text-[var(--fg)] font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             >
               {isAuthenticated ? 'Logout' : 'Login'}

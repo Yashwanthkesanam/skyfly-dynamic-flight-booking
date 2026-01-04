@@ -14,7 +14,7 @@ from app.db import models
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 from zoneinfo import ZoneInfo
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.services.pricing import calculate_price
 
@@ -261,6 +261,12 @@ def api_search_flights(
     if max_price is not None:
         q = q.filter(models.Flight.price_real <= max_price)
 
+    # Filter out past flights (safety check)
+    # We compare departure_iso (string) with current UTC ISO string
+    # Assuming standard ISO8601 sortable strings
+    now_iso = datetime.now(timezone.utc).isoformat()
+    q = q.filter(models.Flight.departure_iso > now_iso)
+
     # Sorting
     if sort_by == "price":
         q = q.order_by(models.Flight.price_real.asc() if order == "asc" else models.Flight.price_real.desc())
@@ -391,6 +397,10 @@ def api_route_search(
     if max_price is not None:
         q = q.filter(models.Flight.price_real <= max_price)
 
+    # Filter out past flights
+    now_iso = datetime.now(timezone.utc).isoformat()
+    q = q.filter(models.Flight.departure_iso > now_iso)
+
     if sort_by == "price":
         q = q.order_by(models.Flight.price_real.asc() if order == "asc" else models.Flight.price_real.desc())
     elif sort_by == "duration":
@@ -465,44 +475,46 @@ def api_route_search(
 # Popular Routes (uses search_logs first, fallback to routes)
 # =========================================================
 @router.get("/flights/popular")
-def api_popular_routes(limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
-    try:
-        rows = db.execute(
-            text("""
-                SELECT origin_code, destination_code, COUNT(*) AS cnt
-                FROM search_logs
-                WHERE origin_code IS NOT NULL AND destination_code IS NOT NULL
-                GROUP BY origin_code, destination_code
-                ORDER BY cnt DESC
-                LIMIT :limit
-            """),
-            {"limit": limit},
-        ).fetchall()
-
-        if rows:
-            return [{"origin": r[0], "destination": r[1], "search_count": r[2]} for r in rows]
-    except Exception as e:
-        print("[POPULAR] search_logs query failed:", e)
-
-    rows = db.execute(
-        text("SELECT origin_code, destination_code FROM routes LIMIT :limit"),
-        {"limit": limit},
-    ).fetchall()
-    if rows:
-        return [{"origin": r[0], "destination": r[1], "route_count": None} for r in rows]
-
-    # Fallback to actual flights table if routes table is empty
-    rows = db.execute(
-        text("""
-            SELECT origin, destination, COUNT(*) as cnt 
-            FROM flights 
-            GROUP BY origin, destination 
-            ORDER BY cnt DESC 
-            LIMIT :limit
-        """),
-        {"limit": limit},
-    ).fetchall()
-    return [{"origin": r[0], "destination": r[1], "route_count": r[2]} for r in rows]
+def api_popular_routes(limit: int = Query(6, ge=1, le=50), db: Session = Depends(get_db)):
+    """
+    Return specific popular routes as requested:
+    HYD→BLR, HYD→DEL, HYD→MAA, BLR→DEL, BLR→BOM, DEL→BOM
+    """
+    # Define the exact 6 routes to display
+    target_routes = [
+        ("HYD", "BLR"),
+        ("HYD", "DEL"),
+        ("HYD", "MAA"),
+        ("BLR", "DEL"),
+        ("BLR", "BOM"),
+        ("DEL", "BOM")
+    ]
+    
+    results = []
+    
+    for origin, destination in target_routes[:limit]:
+        # Find a flight for this route with future departure
+        flight = db.query(models.Flight).filter(
+            models.Flight.origin == origin,
+            models.Flight.destination == destination,
+            models.Flight.departure_iso > datetime.now(timezone.utc).isoformat()
+        ).first()
+        
+        if flight:
+            results.append({
+                "origin": origin,
+                "destination": destination,
+                "dynamic_price": float(flight.price_real)
+            })
+        else:
+            # If no future flight exists, still show the route with a default price
+            results.append({
+                "origin": origin,
+                "destination": destination,
+                "dynamic_price": 2499.0
+            })
+    
+    return results
 
 
 # =========================================================

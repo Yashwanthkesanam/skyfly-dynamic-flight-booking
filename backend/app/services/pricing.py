@@ -55,6 +55,26 @@ def clamp_price(base: float, price: float):
     max_p = base * MAX_PRICE_FACTOR
     return max(min_p, min(price, max_p))
 
+def sameday_factor(hours: Optional[float]):
+    """
+    Aggressive surge for flights departing within 24 hours.
+    Increases price every 5 minutes (every 0.0833 hours).
+    Ex: 24h -> 0 steps -> 1.0x
+        23h -> 12 steps -> 1.06x
+        1h  -> 276 steps -> 2.38x
+    """
+    if hours is None or hours >= 24.0 or hours < 0:
+        return 1.0
+    
+    # How many 5-minute blocks have passed since the 24h mark?
+    # Total blocks in 24h = 24 * 60 / 5 = 288 blocks
+    # Hours passed "into" the day = 24 - hours
+    intervals = (24.0 - hours) * 12.0  # 12 intervals per hour
+    
+    # Growth rate: 0.5% per 5-minute interval
+    # Linear approximation for predictable steps: 1 + (N * 0.005)
+    return 1.0 + (intervals * 0.005)
+
 def calculate_price(flight_row, demand_score: Optional[float] = None, now: Optional[datetime] = None):
     """
     flight_row: ORM obj or dict with 'base_price', 'price_real', 'seats_available', 'seats_total', 'departure_iso'
@@ -77,8 +97,9 @@ def calculate_price(flight_row, demand_score: Optional[float] = None, now: Optio
     t_mult = time_factor(hours)
     s_mult = seat_factor(seats_available, seats_total)
     d_mult = demand_factor(demand_score)
+    sd_mult = sameday_factor(hours)  # Same-Day Surge
 
-    raw = base * t_mult * s_mult * d_mult
+    raw = base * t_mult * s_mult * d_mult * sd_mult
     final = clamp_price(base, raw)
 
     breakdown = {
@@ -87,6 +108,7 @@ def calculate_price(flight_row, demand_score: Optional[float] = None, now: Optio
         "time_mult": round(t_mult,4),
         "seat_mult": round(s_mult,4),
         "demand_mult": round(d_mult,4),
+        "sameday_mult": round(sd_mult,4),
         "raw_price": round(raw,2),
         "clamped_price": round(final,2)
     }

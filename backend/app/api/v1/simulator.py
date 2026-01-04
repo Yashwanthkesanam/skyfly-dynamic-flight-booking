@@ -23,3 +23,28 @@ def api_sim_tick():
 @router.get("/status")
 def api_sim_status():
     return status()
+
+from pydantic import BaseModel
+class EventTrigger(BaseModel):
+    city: str
+    factor: float = 0.5
+
+from app.services.simulator import trigger_surge, reset_surge
+
+@router.post("/event")
+def api_trigger_event(evt: EventTrigger):
+    count = trigger_surge(evt.city, evt.factor)
+    return {
+        "message": f"Event triggered for {evt.city}", 
+        "flights_affected": count,
+        "factor": evt.factor
+    }
+
+@router.post("/event/reset")
+def api_reset_event(evt: EventTrigger):
+    count = reset_surge(evt.city)
+    return {
+        "message": f"Normalcy restored for {evt.city}", 
+        "flights_affected": count,
+        "factor": 0.0
+    }

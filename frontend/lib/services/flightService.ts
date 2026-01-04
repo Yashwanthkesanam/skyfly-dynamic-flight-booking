@@ -22,8 +22,8 @@ const mapFlight = (data: any): FlightItem => ({
 });
 
 export interface SearchParams {
-    origin: string;
-    destination: string;
+    origin?: string;
+    destination?: string;
     date: string;
     min_price?: number;
     max_price?: number;

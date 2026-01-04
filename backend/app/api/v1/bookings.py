@@ -69,18 +69,24 @@ def api_confirm(req: ConfirmRequest, background_tasks: BackgroundTasks, db: Sess
         )
 
         if status == "confirmed":
+            print(f"DEBUG: Booking confirmed for PNR {booking.pnr}. Preparing email...")
             try:
                 # Prepare data for background email sending (avoid DB session issues)
+                # Use simple namespace objects instead of Pydantic models to avoid serialization issues
+                from types import SimpleNamespace
+                
+                booking_data = SimpleNamespace(
+                    pnr=booking.pnr,
+                    passenger_name=booking.passenger_name,
+                    passenger_contact=booking.passenger_contact,
+                    seats_booked=booking.seats_booked,
+                    price_paid=booking.price_paid
+                )
+                
+                print(f"DEBUG: Booking data loaded. Contact: {booking_data.passenger_contact}")
+                
                 flight_obj = booking.flight
-                
-                # Construct Pydantic/Dict objects to pass to background task
-                # We use the schema classes or just simple objects that the email service expects
-                # email_service expects objects with .attribute access
-                
-                # Create a simple class or use schemas. Using Schemas is cleaner.
-                booking_data = BookingOut.from_orm(booking)
-                
-                flight_data = FlightShort(
+                flight_data = SimpleNamespace(
                     id=flight_obj.id,
                     flight_number=flight_obj.flight_number,
                     airline=flight_obj.airline,
@@ -92,9 +98,12 @@ def api_confirm(req: ConfirmRequest, background_tasks: BackgroundTasks, db: Sess
                 
                 print(f"DEBUG: Queueing email task for PNR: {booking.pnr} to {booking.passenger_contact}")
                 background_tasks.add_task(send_booking_email, booking_data, flight_data)
+                print("DEBUG: Email task queued successfully.")
             except Exception as e:
                 # Do not block response on email failure logic error
                 print(f"Error preparing email task: {e}")
+                import traceback
+                traceback.print_exc()
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -167,6 +176,7 @@ def lookup_booking(pnr: str, db: Session = Depends(get_db)):
         "hold_expires_at": to_ist_iso(b.hold_expires_at),
         "created_at": to_ist_iso(getattr(b, "created_at", None)),
         "updated_at": to_ist_iso(getattr(b, "updated_at", None)),
+        "flight": b.flight,  # Include nested flight details
     }
 
     # payment_meta: stored as TEXT in DB. Try to parse JSON, otherwise return string or None.

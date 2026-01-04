@@ -68,7 +68,7 @@ def iso_to_ist(iso_str: Optional[Union[str, datetime]]) -> Optional[str]:
 # -------------------------------
 # Cooldown Settings
 # -------------------------------
-DEFAULT_MIN_UPDATE_SECONDS = 300  # 5 minutes
+DEFAULT_MIN_UPDATE_SECONDS = 60  # 1 minute
 
 
 # -------------------------------

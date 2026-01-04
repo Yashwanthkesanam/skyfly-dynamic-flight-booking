@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { bookingService, BookingDetails } from '../lib/services/bookingService';
 import Spinner from './Spinner';
 
-export default function PNRLookup() {
+interface PNRLookupProps {
+  title?: string;
+  allowCancel?: boolean;
+}
+
+export default function PNRLookup({ title = "Manage Booking", allowCancel = true }: PNRLookupProps) {
   const [pnr, setPnr] = useState('');
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState<BookingDetails | null>(null);
@@ -47,7 +52,7 @@ export default function PNRLookup() {
 
   return (
     <div className="bg-[var(--surface)] p-6 rounded-xl shadow-sm border border-[var(--border)] w-full transition-colors">
-      <h2 className="text-xl font-bold mb-4 text-[var(--fg)]">Manage Booking</h2>
+      <h2 className="text-xl font-bold mb-4 text-[var(--fg)]">{title}</h2>
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -97,7 +102,7 @@ export default function PNRLookup() {
             </div>
           </div>
 
-          {booking.status !== 'cancelled' && booking.status !== 'CANCELLED' && (
+          {allowCancel && booking.status !== 'cancelled' && booking.status !== 'CANCELLED' && (
             <div className="mt-6 pt-4 border-t border-[var(--border)] flex justify-end">
               <button
                 onClick={handleCancel}

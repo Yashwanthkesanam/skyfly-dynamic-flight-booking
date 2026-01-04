@@ -91,21 +91,51 @@ export default function Home() {
         <h2 className="text-2xl font-bold text-gray-900 mb-8">Popular Routes</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {popularRoutes.length > 0 ? (
-            popularRoutes.map((route, idx) => (
-              <div key={idx} onClick={() => router.push(`/results?origin=${route.origin}&destination=${route.destination}&date=${new Date().toISOString().split('T')[0]}`)} className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-100">
-                <div className={`h-32 rounded-lg mb-4 flex items-center justify-center text-4xl ${idx % 3 === 0 ? 'bg-blue-50' : idx % 3 === 1 ? 'bg-orange-50' : 'bg-green-50'}`}>
-                  {idx % 3 === 0 ? '🏝️' : idx % 3 === 1 ? '🏙️' : '🏔️'}
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase font-bold tracking-wide">Popular</div>
-                    <div className="text-lg font-bold text-gray-900">{route.origin} to {route.destination}</div>
-                    <div className="text-sm text-gray-500">{route.search_count || 'Hot'} searches recently</div>
+            popularRoutes.map((route, idx) => {
+              // Determine image and city name based on DESTINATION
+              let bgImage = '/images/hero1.jpg';
+              let cityName = route.destination;
+
+              const city = route.destination.toLowerCase();
+              const code = route.destination.toUpperCase();
+
+              if (city.includes('delhi') || code === 'DEL') { bgImage = '/images/DEL.jpg'; cityName = 'Delhi'; }
+              else if (city.includes('bengaluru') || city.includes('bangalore') || code === 'BLR') { bgImage = '/images/BLR.jpg'; cityName = 'Bengaluru'; }
+              else if (city.includes('mumbai') || code === 'BOM') { bgImage = '/images/BOM.jpg'; cityName = 'Mumbai'; }
+              else if (city.includes('chennai') || code === 'MAA') { bgImage = '/images/MAA.jpg'; cityName = 'Chennai'; }
+              else bgImage = `/images/hero${(idx % 2) + 1}.jpg`;
+
+              return (
+                <div key={idx} onClick={() => router.push(`/results?origin=${route.origin}&destination=${route.destination}&date=${new Date().toISOString().split('T')[0]}`)} className="group relative h-64 rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                  {/* Background Image */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                    style={{ backgroundImage: `url('${bgImage}')` }}
+                  />
+                  {/* Heavy Gradient Overlay for Text Visibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-90 transition-opacity" />
+
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <div className="inline-block bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded mb-2 shadow-sm backdrop-blur-sm">
+                      Popular • {cityName}
+                    </div>
+                    <div className="text-3xl font-extrabold mb-2 drop-shadow-md tracking-tight">
+                      {route.origin} <span className="text-blue-400">→</span> {route.destination}
+                    </div>
+                    <div className="flex justify-between items-end mt-3 border-t border-white/20 pt-3">
+                      <div>
+                        <div className="text-xs text-gray-300 font-medium">Starting from</div>
+                        <div className="text-xl font-bold text-green-400 drop-shadow-sm">₹{route.dynamic_price?.toLocaleString() || '2,499'}</div>
+                      </div>
+                      <span className="bg-white text-blue-600 hover:bg-blue-50 px-5 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors">
+                        Book Now
+                      </span>
+                    </div>
                   </div>
-                  <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">Book</div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="col-span-3 text-center text-gray-500 py-10">Loading popular routes...</div>
           )}

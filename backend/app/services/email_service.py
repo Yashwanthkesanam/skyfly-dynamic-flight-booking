@@ -11,23 +11,42 @@ load_dotenv()
 
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "yashwanthece452@gmail.com")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "acsbjycyijgvyfie")  # App Password (spaces removed)
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", SMTP_USERNAME)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://skyfly-dynamic-flight-booking.vercel.app")
+
+# Email debug log file
+EMAIL_LOG_FILE = "email_debug.log"
+
+def log_email(msg):
+    """Write email debug messages to both console and file"""
+    print(msg)
+    try:
+        with open(EMAIL_LOG_FILE, "a", encoding="utf-8") as f:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] {msg}\n")
+    except:
+        pass
 
 def send_booking_email(booking, flight):
     """
     Sends a booking confirmation email to the passenger.
     """
+    log_email(f"[EMAIL] send_booking_email called for booking: {getattr(booking, 'pnr', 'UNKNOWN')}")
+    log_email(f"[EMAIL] Passenger contact: {getattr(booking, 'passenger_contact', 'NONE')}")
+    
     if not booking.passenger_contact or "@" not in booking.passenger_contact:
-        print(f"Skipping email: Invalid contact {booking.passenger_contact}")
+        log_email(f"[EMAIL] SKIP: Invalid contact {booking.passenger_contact}")
         return False
 
-    print(f"DEBUG: Attempting to send email to {booking.passenger_contact}")
+    log_email(f"[EMAIL] Attempting to send email to {booking.passenger_contact}")
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        print("Skipping email: SMTP credentials not configured.")
+        log_email("[EMAIL] SKIP: SMTP credentials not configured.")
         return False
+    
+    log_email(f"[EMAIL] SMTP configured: {SMTP_USERNAME}")
 
     try:
         subject = f"Booking Confirmed! PNR: {booking.pnr}"
@@ -158,16 +177,21 @@ def send_booking_email(booking, flight):
 
         msg.attach(MIMEText(html_content, 'html'))
 
-        print(f"DEBUG: Connecting to {SMTP_SERVER}:{SMTP_PORT} as {SMTP_USERNAME}")
+        log_email(f"[EMAIL] Connecting to {SMTP_SERVER}:{SMTP_PORT} as {SMTP_USERNAME}")
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.set_debuglevel(1)  # Enable low-level SMTP debugging
+            server.set_debuglevel(0)  # Disable verbose SMTP debugging for cleaner logs
+            log_email("[EMAIL] Starting TLS...")
             server.starttls()
+            log_email("[EMAIL] Logging in...")
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            log_email("[EMAIL] Sending message...")
             server.send_message(msg)
         
-        print(f"✅ Email sent successfully to {booking.passenger_contact}")
+        log_email(f"[EMAIL] SUCCESS: Email sent to {booking.passenger_contact}")
         return True
 
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        log_email(f"[EMAIL] FAILURE: {e}")
+        import traceback
+        traceback.print_exc()
         return False

@@ -1,4 +1,6 @@
 // lib/utils/auth.ts
+import api from '../api';
+
 const AUTH_TOKEN_KEY = 'flysmart_admin_token';
 const DEMO_CREDENTIALS = {
     email: 'admin@flysmart.com',
@@ -42,5 +44,16 @@ export const authService = {
     getAuthToken: (): string | null => {
         if (typeof window === 'undefined') return null;
         return localStorage.getItem(AUTH_TOKEN_KEY);
+    },
+
+    getBookings: async (date?: string) => {
+        try {
+            const url = date ? `/api/v1/admin/bookings?date=${date}` : '/api/v1/admin/bookings';
+            const response = await api.get(url);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to fetch bookings:", error);
+            return [];
+        }
     }
 };

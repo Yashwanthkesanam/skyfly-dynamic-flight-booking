@@ -206,3 +206,20 @@ def delete_flight(
     db.commit()
     
     return {"message": "Flight deleted successfully"}
+
+from app.db.models import Booking
+
+@router.get("/bookings")
+def get_all_bookings(
+    date: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get all bookings for admin dashboard"""
+    query = db.query(Booking)
+    
+    if date:
+        # Filter by created_at date (string comparison YYYY-MM-DD%)
+        query = query.filter(Booking.created_at.like(f"{date}%"))
+        
+    bookings = query.order_by(Booking.created_at.desc()).all()
+    return bookings

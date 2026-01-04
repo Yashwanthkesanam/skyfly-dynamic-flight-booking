@@ -102,6 +102,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
             <div className="mb-6 border-b border-[var(--border)] pb-6">
                 <button
                     onClick={() => toggleSection('price')}
+                    suppressHydrationWarning={true}
                     className="flex items-center justify-between w-full mb-4"
                 >
                     <span className="font-semibold text-[var(--fg)]">Price Range</span>
@@ -130,6 +131,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
                                         className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] rounded-lg text-sm focus:outline-none focus:border-[var(--primary)]"
                                         min={minPrice}
                                         max={filters.priceRange[1]}
+                                        suppressHydrationWarning={true}
                                     />
                                 </div>
                                 <span className="text-[var(--muted)] mt-5">-</span>
@@ -142,6 +144,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
                                         className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] rounded-lg text-sm focus:outline-none focus:border-[var(--primary)]"
                                         min={filters.priceRange[0]}
                                         max={maxPrice}
+                                        suppressHydrationWarning={true}
                                     />
                                 </div>
                             </div>
@@ -166,6 +169,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
             <div className="mb-6 border-b border-[var(--border)] pb-6">
                 <button
                     onClick={() => toggleSection('airlines')}
+                    suppressHydrationWarning={true}
                     className="flex items-center justify-between w-full mb-4"
                 >
                     <span className="font-semibold text-[var(--fg)]">Airlines</span>
@@ -190,6 +194,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
                                         type="checkbox"
                                         checked={filters.selectedAirlines.includes(airline)}
                                         onChange={() => handleAirlineToggle(airline)}
+                                        suppressHydrationWarning={true}
                                         className="w-4 h-4 text-blue-600 border-[var(--border)] rounded focus:ring-blue-500 bg-[var(--bg)]"
                                     />
                                     <span className="text-sm text-[var(--fg)] group-hover:text-[var(--primary)] transition-colors">{airline}</span>
@@ -204,6 +209,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
             <div>
                 <button
                     onClick={() => toggleSection('time')}
+                    suppressHydrationWarning={true}
                     className="flex items-center justify-between w-full mb-4"
                 >
                     <span className="font-semibold text-[var(--fg)]">Departure Time</span>
@@ -230,6 +236,7 @@ export default function FilterPanel({ airlines, minPrice, maxPrice, onFilterChan
                                         ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                                         : 'border-[var(--border)] hover:border-[var(--muted)] text-[var(--fg)] hover:bg-[var(--bg)]'
                                         }`}
+                                    suppressHydrationWarning={true}
                                 >
                                     <div className="font-semibold text-sm">{slot.label}</div>
                                     <div className="text-xs opacity-75">{slot.time}</div>
