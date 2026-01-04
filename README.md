@@ -185,10 +185,10 @@ npm run dev
 ```
 
 ### Access
-- **Frontend**: https://flysmart-dynamic-flight-git-234bc6-yashwanths-projects-8d659ab7.vercel.app
+- **Frontend**: https://ykflys.vercel.app
 - **Backend API**: https://flysmart-dynamic-flight-booking.onrender.com
 - **API Docs**: https://flysmart-dynamic-flight-booking.onrender.com/docs
-- **Admin Panel**: https://flysmart-dynamic-flight-git-234bc6-yashwanths-projects-8d659ab7.vercel.app/admin
+- **Admin Panel**: https://ykflys.vercel.app/admin
 
 
 > Note: Admin credentials are hardcoded in `frontend/lib/utils/auth.ts` for demo purposes.
