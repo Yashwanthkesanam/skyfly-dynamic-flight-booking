@@ -14,7 +14,7 @@ pnpm dev
 bun dev
 ```
 
-Open [https://skyfly-dynamic-flight-booking.vercel.app](https://skyfly-dynamic-flight-booking.vercel.app) with your browser to see the result.
+Open [https://flysmart-dynamic-flight-git-234bc6-yashwanths-projects-8d659ab7.vercel.app](https://flysmart-dynamic-flight-git-234bc6-yashwanths-projects-8d659ab7.vercel.app) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

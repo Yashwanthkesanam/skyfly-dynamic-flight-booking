@@ -14,7 +14,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")  # Must be set in .env file
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")  # Must be set in .env file
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", SMTP_USERNAME)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://skyfly-dynamic-flight-booking.vercel.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://flysmart-dynamic-flight-git-234bc6-yashwanths-projects-8d659ab7.vercel.app")
 
 # Email debug log file
 EMAIL_LOG_FILE = "email_debug.log"
