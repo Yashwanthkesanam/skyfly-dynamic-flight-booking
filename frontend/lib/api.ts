@@ -1,7 +1,7 @@
 // FILE: lib/api.ts
 import axios from 'axios';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://flysmart-dynamic-flight-booking.onrender.com';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://flysmart-backend-448p.onrender.com';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

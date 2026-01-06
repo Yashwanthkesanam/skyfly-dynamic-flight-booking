@@ -17,6 +17,11 @@ export default function SearchForm() {
   const [tripType, setTripType] = useState<"oneway" | "roundtrip">("oneway");
   const [from, setFrom] = useState("Delhi");
   const [to, setTo] = useState("Bengaluru");
+
+  // Airport Details State
+  const [fromDetails, setFromDetails] = useState({ code: 'DEL', airport: 'Delhi Airport India' });
+  const [toDetails, setToDetails] = useState({ code: 'BLR', airport: 'Bengaluru International Airport' });
+
   const [departDate, setDepartDate] = useState<Date | null>(null);
   const [returnDate, setReturnDate] = useState<Date | null>(null);
 
@@ -93,6 +98,7 @@ export default function SearchForm() {
 
   const selectFrom = (item: any) => {
     setFrom(item.city);
+    setFromDetails({ code: item.code, airport: item.airport });
     setShowFromSuggest(false);
     // Check if same as destination
     if (item.city.toLowerCase() === to.toLowerCase()) {
@@ -104,6 +110,7 @@ export default function SearchForm() {
 
   const selectTo = (item: any) => {
     setTo(item.city);
+    setToDetails({ code: item.code, airport: item.airport });
     setShowToSuggest(false);
     // Check if same as origin
     if (item.city.toLowerCase() === from.toLowerCase()) {
@@ -191,7 +198,7 @@ export default function SearchForm() {
               className="w-full text-3xl font-black text-[var(--fg)] bg-transparent outline-none mt-1 truncate placeholder:text-[var(--muted)]"
               suppressHydrationWarning
             />
-            <span className="block text-xs text-[var(--muted)] mt-1 truncate">DEL, Delhi Airport India</span>
+            <span className="block text-xs text-[var(--muted)] mt-1 truncate">{fromDetails.code}, {fromDetails.airport}</span>
 
             {/* Suggestions One */}
             {showFromSuggest && suggestFrom.length > 0 && (
@@ -220,14 +227,22 @@ export default function SearchForm() {
               className="w-full text-3xl font-black text-[var(--fg)] bg-transparent outline-none mt-1 truncate placeholder:text-[var(--muted)]"
               suppressHydrationWarning
             />
-            <span className="block text-xs text-[var(--muted)] mt-1 truncate">BLR, Bengaluru International Airport</span>
+            <span className="block text-xs text-[var(--muted)] mt-1 truncate">{toDetails.code}, {toDetails.airport}</span>
 
             {/* Swap Icon */}
             <div
               className="absolute left-1/2 -top-4 md:left-[-1rem] md:top-1/2 -translate-x-1/2 md:translate-x-0 md:-translate-y-1/2 w-8 h-8 rounded-full bg-[var(--surface)] shadow-md border border-[var(--border)] flex items-center justify-center text-blue-600 z-10 cursor-pointer hover:scale-110 transition-transform rotate-90 md:rotate-0"
               onClick={(e) => {
                 e.stopPropagation();
-                const temp = from; setFrom(to); setTo(temp);
+                // Swap logic
+                const tempFrom = from;
+                const tempFromDetails = fromDetails;
+
+                setFrom(to);
+                setFromDetails(toDetails);
+
+                setTo(tempFrom);
+                setToDetails(tempFromDetails);
               }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>

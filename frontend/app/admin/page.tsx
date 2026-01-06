@@ -382,16 +382,16 @@ export default function AdminPage() {
           {/* Table */}
           <div className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-[var(--muted)]">
-                <thead className="bg-gray-50 dark:bg-gray-800/50 uppercase text-xs font-bold text-[var(--muted)] border-b border-[var(--border)]">
+              <table className="w-full text-left text-gray-600 dark:text-gray-300">
+                <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 uppercase text-xs font-bold tracking-wider">
                   <tr>
-                    <th className="px-6 py-4">Flight</th>
+                    <th className="px-6 py-4 rounded-tl-lg">Flight</th>
                     <th className="px-6 py-4">Route</th>
                     <th className="px-6 py-4">Time</th>
                     <th className="px-6 py-4">Seats</th>
                     <th className="px-6 py-4">Price</th>
                     <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4 text-right rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
@@ -399,44 +399,44 @@ export default function AdminPage() {
                     [...Array(5)].map((_, i) => <TableRowSkeleton key={i} />)
                   ) : flights.length > 0 ? (
                     flights.map(f => (
-                      <tr key={f.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                      <tr key={f.id} className="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors group">
                         <td className="px-6 py-4">
-                          <div className="font-bold text-[var(--fg)]">{f.flight_number}</div>
-                          <div className="text-xs">{f.airline}</div>
+                          <div className="font-mono text-base font-bold text-blue-600 dark:text-blue-400">{f.flight_number}</div>
+                          <div className="text-xs font-semibold text-[var(--muted)]">{f.airline}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono">{f.origin}</span>
+                          <div className="flex items-center gap-2 text-base">
+                            <span className="font-mono font-semibold">{f.origin}</span>
                             <span className="text-[var(--muted)]">→</span>
-                            <span className="font-mono">{f.destination}</span>
+                            <span className="font-mono font-semibold">{f.destination}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-[var(--fg)]">
+                          <div className="font-bold text-[var(--fg)] text-base">
                             {f.departure_time ? new Date(f.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
                           </div>
-                          <div className="text-xs">{f.date}</div>
+                          <div className="text-sm text-[var(--muted)]">{f.date}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div className="w-24 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div
                                 className={`h-full ${f.seats_available < 20 ? 'bg-red-500' : 'bg-green-500'}`}
                                 style={{ width: `${(f.seats_available / (f.seats_available + 10)) * 100}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs font-medium">{f.seats_available} left</span>
+                            <span className="text-xs font-bold whitespace-nowrap">{f.seats_available} left</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-bold text-[var(--fg)]">₹{f.dynamic_price}</td>
+                        <td className="px-6 py-4 font-bold text-[var(--fg)] text-lg">₹{f.dynamic_price.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           {(f.price_increase_percent && f.price_increase_percent > 0) ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                               Surge +{f.price_increase_percent}%
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                              Standard
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                              Normal
                             </span>
                           )}
                         </td>
@@ -490,19 +490,41 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-[var(--muted)]">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 uppercase text-xs font-bold text-[var(--muted)]">
-                <tr><th className="px-6 py-3">PNR</th><th className="px-6 py-3">Passenger</th><th className="px-6 py-3">Flight</th><th className="px-6 py-3">Seats</th><th className="px-6 py-3">Booking Time</th><th className="px-6 py-3">Status</th></tr>
+            <table className="w-full text-left text-gray-600 dark:text-gray-300">
+              <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 uppercase text-xs font-bold tracking-wider">
+                <tr>
+                  <th className="px-6 py-4 rounded-tl-lg">PNR</th>
+                  <th className="px-6 py-4">Passenger</th>
+                  <th className="px-6 py-4">Flight</th>
+                  <th className="px-6 py-4">Seats</th>
+                  <th className="px-6 py-4">Booking Time</th>
+                  <th className="px-6 py-4 rounded-tr-lg">Status</th>
+                </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[var(--border)]">
                 {bookings.map(b => (
-                  <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 border-b border-[var(--border)]">
-                    <td className="px-6 py-4 font-bold">{b.pnr}</td>
-                    <td className="px-6 py-4"><div>{b.passenger_name}</div><div className="text-xs opacity-70">{b.passenger_contact}</div></td>
-                    <td className="px-6 py-4 font-mono">{b.flight?.flight_number}</td>
-                    <td className="px-6 py-4">{b.seats_booked}</td>
-                    <td className="px-6 py-4 text-xs font-mono text-[var(--muted)]">{b.created_at}</td>
-                    <td className="px-6 py-4"><span className="uppercase text-xs font-bold">{b.status}</span></td>
+                  <tr key={b.id} className="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-base font-bold text-blue-600 dark:text-blue-400">{b.pnr}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-[var(--fg)] text-base">{b.passenger_name}</div>
+                      <div className="text-sm text-[var(--muted)]">{b.passenger_contact}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-mono font-medium">{b.flight?.flight_number}</div>
+                      <div className="text-xs text-[var(--muted)]">{b.flight?.origin} → {b.flight?.destination}</div>
+                    </td>
+                    <td className="px-6 py-4 font-medium">{b.seats_booked}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--muted)]">{new Date(b.created_at).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide
+                        ${b.status === 'confirmed'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>
+                        {b.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

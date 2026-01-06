@@ -8,6 +8,8 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import ThemeProvider from '../components/ThemeProvider';
 import { Toaster } from 'react-hot-toast';
 
+import ServerWarmup from '../components/ServerWarmup';
+
 export const metadata: Metadata = {
   title: 'FlySmart - Smart Flight Booking',
   description: 'Book flights with dynamic pricing and save money.',
@@ -24,6 +26,7 @@ export default function RootLayout({
         <ThemeProvider>
           <ErrorBoundary>
             <Providers>
+              <ServerWarmup />
               <Header />
               <main className="flex-grow">
                 {children}

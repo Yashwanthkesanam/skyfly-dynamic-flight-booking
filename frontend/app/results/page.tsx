@@ -17,6 +17,7 @@ import { FlightItem } from '../../types';
 import { FunnelIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
 import { FlightCardSkeleton } from '../../components/Skeleton';
 import { filterValidFlights } from '../../utils/validateFlightData';
+import EmptyState from '../../components/EmptyState';
 
 function ResultsContent() {
   const router = useRouter();
@@ -183,7 +184,7 @@ function ResultsContent() {
                 <h1 className="text-2xl font-bold text-[var(--fg)]">
                   {isRoundTrip ? 'Select Flights' : `Flights from ${origin} to ${destination}`}
                 </h1>
-                <p className="text-sm text-[var(--muted)] mt-1">
+                <p className="text-lg font-semibold text-[var(--muted)] mt-1">
                   {date} {isRoundTrip && ` - ${returnDate}`}
                 </p>
               </div>
@@ -197,43 +198,76 @@ function ResultsContent() {
 
             {/* Error / Loading */}
             {isLoading && [...Array(3)].map((_, i) => <FlightCardSkeleton key={i} />)}
-            {(errorOut || errorRet) && <div className="text-red-500">Error loading flights.</div>}
+            {(errorOut || errorRet) && (
+              <EmptyState
+                type="error"
+                message="We couldn't fetch the latest flight data. Please try again."
+                action={{ label: "Retry", onClick: () => window.location.reload() }}
+              />
+            )}
 
             {/* OUTBOUND SECTION */}
             <div className="mb-8">
               {isRoundTrip && <h2 className="text-xl font-bold mb-4 text-[var(--fg)] flex items-center gap-2">🛫 Outbound: <span className="text-blue-500">{origin} → {destination}</span></h2>}
-              <div className="space-y-4">
-                {processedOutbound.map(f => (
-                  <div key={f.id} className={`transition-all ${isRoundTrip && selectedOutbound?.id === f.id ? 'ring-2 ring-blue-500 rounded-xl shadow-lg scale-[1.01]' : ''}`}>
-                    <FlightCard
-                      flight={f}
-                      onReserve={isRoundTrip ? handleSelectOutbound : handleBookSingle}
-                      onShowBreakdown={setBreakdownFlight}
-                      selectionMode={isRoundTrip}
-                      isSelected={isRoundTrip && selectedOutbound?.id === f.id}
-                    />
-                  </div>
-                ))}
-              </div>
+
+              {!isLoading && !errorOut && processedOutbound.length === 0 ? (
+                <EmptyState
+                  type="no-flights"
+                  action={{
+                    label: "Check Tomorrow's Flights",
+                    onClick: () => {
+                      const current = new Date(date);
+                      const nextDay = new Date(current);
+                      nextDay.setDate(current.getDate() + 1);
+                      const nextDateStr = nextDay.toISOString().split('T')[0];
+
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set('date', nextDateStr);
+                      // If round trip, maybe adjust return date if it becomes before outbound? 
+                      // For simplicity, just update outbound date for now.
+                      router.push(`/results?${params.toString()}`);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {processedOutbound.map(f => (
+                    <div key={f.id} className={`transition-all ${isRoundTrip && selectedOutbound?.id === f.id ? 'ring-2 ring-blue-500 rounded-xl shadow-lg scale-[1.01]' : ''}`}>
+                      <FlightCard
+                        flight={f}
+                        onReserve={isRoundTrip ? handleSelectOutbound : handleBookSingle}
+                        onShowBreakdown={setBreakdownFlight}
+                        selectionMode={isRoundTrip}
+                        isSelected={isRoundTrip && selectedOutbound?.id === f.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* RETURN SECTION (If Round Trip) */}
             {isRoundTrip && (
               <div className="mb-8 pt-8 border-t border-[var(--border)]">
                 <h2 className="text-xl font-bold mb-4 text-[var(--fg)] flex items-center gap-2">🛬 Return: <span className="text-orange-500">{destination} → {origin}</span></h2>
-                <div className="space-y-4">
-                  {processedReturn.map(f => (
-                    <div key={f.id} className={`transition-all ${selectedReturn?.id === f.id ? 'ring-2 ring-orange-500 rounded-xl shadow-lg scale-[1.01]' : ''}`}>
-                      <FlightCard
-                        flight={f}
-                        onReserve={isRoundTrip ? handleSelectReturn : handleBookSingle}
-                        onShowBreakdown={setBreakdownFlight}
-                        selectionMode={isRoundTrip}
-                        isSelected={selectedReturn?.id === f.id}
-                      />
-                    </div>
-                  ))}
-                </div>
+
+                {!isLoading && !errorRet && processedReturn.length === 0 ? (
+                  <EmptyState type="no-flights" />
+                ) : (
+                  <div className="space-y-4">
+                    {processedReturn.map(f => (
+                      <div key={f.id} className={`transition-all ${selectedReturn?.id === f.id ? 'ring-2 ring-orange-500 rounded-xl shadow-lg scale-[1.01]' : ''}`}>
+                        <FlightCard
+                          flight={f}
+                          onReserve={isRoundTrip ? handleSelectReturn : handleBookSingle}
+                          onShowBreakdown={setBreakdownFlight}
+                          selectionMode={isRoundTrip}
+                          isSelected={selectedReturn?.id === f.id}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

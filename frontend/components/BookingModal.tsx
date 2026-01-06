@@ -185,8 +185,18 @@ export default function BookingModal({ isOpen, onClose, flight, returnFlight, on
 
       dismissToast(toastId);
       onConfirmed(confirmOut.pnr); // Notify parent (pass primary PNR)
-      setStep('success');
-      showSuccess('Booking confirmed! Check your email.');
+
+      // Redirect to confirmation page
+      const pnrParams = new URLSearchParams();
+      pnrParams.set('pnr', confirmOut.pnr);
+      if (pnrRet) pnrParams.set('returnPnr', pnrRet);
+
+      router.push(`/booking-confirmation?${pnrParams.toString()}`);
+
+      // Close modal shortly after redirect starts
+      setTimeout(() => {
+        onClose();
+      }, 500);
 
     } catch (err: any) {
       console.error(err);

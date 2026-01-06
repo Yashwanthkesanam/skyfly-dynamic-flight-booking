@@ -20,7 +20,7 @@ interface UseWebSocketReturn {
     reconnect: () => void;
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://flysmart-dynamic-flight-booking.onrender.com/ws/feeds';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://flysmart-backend-448p.onrender.com/ws/feeds';
 
 if (!WS_URL) {
     if (typeof window !== 'undefined') console.warn('WebSocket URL is not defined. Real-time updates will be disabled.');

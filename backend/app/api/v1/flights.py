@@ -262,9 +262,22 @@ def api_search_flights(
         q = q.filter(models.Flight.price_real <= max_price)
 
     # Filter out past flights (safety check)
-    # We compare departure_iso (string) with current UTC ISO string
-    # Assuming standard ISO8601 sortable strings
-    now_iso = datetime.now(timezone.utc).isoformat()
+    # We compare departure_iso string.
+    # User's data seems to be in IST (Asia/Kolkata).
+    # If we compare naive IST string in DB to UTC now string, we get wrong results:
+    # DB: "2026-01-06T17:08:00" (5 PM IST)
+    # UTC Now: "2026-01-06T11:38:00" (5 PM IST is 11:38 AM UTC)
+    # String compare: "17..." > "11...", so it shows up!
+    # Fix: Compare against CURRENT IST TIME in ISO format.
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).isoformat()
+    # Remove offset info if DB is naive to ensure string matching works, or keep valid ISO.
+    # Ideally DB should have timezone. Assuming naive ISO in DB:
+    # "2026-01-06T17:08:00" vs "2026-01-06T22:11:00+05:30"
+    # We should strip offset from now_ist for string comparison if DB is naive.
+    # Let's try sending a proper ISO string that matches the DB format.
+    
+    # If DB has "YYYY-MM-DDTHH:MM:SS"
+    now_iso = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None).isoformat()
     q = q.filter(models.Flight.departure_iso > now_iso)
 
     # Sorting
@@ -493,12 +506,15 @@ def api_popular_routes(limit: int = Query(6, ge=1, le=50), db: Session = Depends
     results = []
     
     for origin, destination in target_routes[:limit]:
-        # Find a flight for this route with future departure
+        # Find the CHEAPEST flight for this route with future departure
+        # Use IST time for comparison to ensure valid future flights
+        now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None).isoformat()
+        
         flight = db.query(models.Flight).filter(
             models.Flight.origin == origin,
             models.Flight.destination == destination,
-            models.Flight.departure_iso > datetime.now(timezone.utc).isoformat()
-        ).first()
+            models.Flight.departure_iso > now_ist
+        ).order_by(models.Flight.price_real.asc()).first()
         
         if flight:
             results.append({
